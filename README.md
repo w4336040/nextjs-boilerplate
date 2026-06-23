@@ -27,6 +27,7 @@ operations assistant.
 - [Smart Operations Plan](docs/SMART_OPERATIONS_PLAN.md)
 - [API Permission Map](docs/API_PERMISSION_MAP.md)
 - [Implementation Roadmap](docs/IMPLEMENTATION_ROADMAP.md)
+- [OAuth And Token Management](docs/OAUTH_TOKEN_MANAGEMENT.md)
 
 ## Security First
 
@@ -66,7 +67,8 @@ ALIBABA_STATE=local-dev
 Run OAuth locally:
 
 ```powershell
-C:\Users\Administrator\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\python.exe tools\oauth_token.py
+$Py = "C:\Users\Administrator\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\python.exe"
+& $Py tools\auth_manager.py login
 ```
 
 The token response will be saved locally to:
@@ -76,6 +78,15 @@ tokens/alibaba_token.json
 ```
 
 This file is ignored by Git.
+
+Useful token commands:
+
+```powershell
+& $Py tools\auth_manager.py status
+& $Py tools\auth_manager.py refresh
+& $Py tools\auth_manager.py access-token
+& $Py tools\auth_manager.py logout
+```
 
 ## First API Milestone
 
@@ -105,4 +116,3 @@ api.method.name.three
 ```
 
 Do not send secrets or tokens.
-
