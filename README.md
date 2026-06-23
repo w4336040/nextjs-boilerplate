@@ -1,36 +1,69 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Alibaba.com Open Platform local setup
 
-## Getting Started
+This workspace is a safe local template for getting an Alibaba.com Open Platform
+`access_token` and then calling APIs from scripts.
 
-First, run the development server:
+## 1. Rotate the leaked secret first
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+The App Secret was shared in chat, so treat it as leaked:
+
+1. Open Alibaba Open Platform.
+2. Go to your app.
+3. Reset the App Secret.
+4. Do not paste the new secret into chat.
+
+## 2. Configure the app callback URL
+
+In the Alibaba Open Platform app settings, set the OAuth callback / redirect URL
+to:
+
+```text
+http://127.0.0.1:8765/callback
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+If Alibaba requires an HTTPS production URL, use your own server callback later.
+For local development, this localhost callback is the simplest path if allowed.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 3. Create local environment file
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Copy `.env.example` to `.env`, then fill in your values:
 
-## Learn More
+```powershell
+Copy-Item .env.example .env
+notepad .env
+```
 
-To learn more about Next.js, take a look at the following resources:
+The two URLs must come from the official Alibaba Open Platform authorization
+documentation for your app/API family:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- `ALIBABA_AUTH_URL`: the authorization page URL
+- `ALIBABA_TOKEN_URL`: the endpoint that exchanges `code` for `access_token`
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## 4. Get an access token
 
-## Deploy on Vercel
+Run:
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```powershell
+python tools\oauth_token.py
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+The script will:
+
+1. Build an authorization URL.
+2. Open the browser.
+3. Wait for Alibaba to redirect to the local callback.
+4. Capture the `code`.
+5. Exchange the `code` for a token.
+6. Save the raw response to `tokens\alibaba_token.json`.
+
+## 5. Next step
+
+After `tokens\alibaba_token.json` exists, use it to call:
+
+```text
+alibaba.icbu.product.schema.render.draft
+```
+
+That API is mainly for rendering product draft schema rules, so it is useful for
+product publishing, product validation, and category-specific listing templates.
+
