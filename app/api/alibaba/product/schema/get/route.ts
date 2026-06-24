@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
+  buildIopParams,
+  callIopApi,
   getAccessTokenFromRequest,
+  iopGatewayBase,
+  resolveIopApiUrl,
   redact,
 } from "../../../_lib/iop";
 import {
@@ -125,16 +129,45 @@ async function handle(request: NextRequest) {
     }
 
     const publishRequest = buildPublishRequest(request, body);
+    const protocol = request.nextUrl.searchParams.get("protocol") || "top";
     const gateway = resolveTopGatewayUrl(
       request.nextUrl.searchParams.get("gateway") || "",
     );
-    const apiParams = {
+    const topApiParams = {
       session: accessToken || "DRY_RUN_ACCESS_TOKEN",
+      param_product_top_publish_request: JSON.stringify(publishRequest),
+    };
+    const iopApiParams = {
+      access_token: accessToken || "DRY_RUN_ACCESS_TOKEN",
       param_product_top_publish_request: JSON.stringify(publishRequest),
     };
 
     if (isDryRun) {
-      const signed = buildTopParams(API_NAME, apiParams);
+      if (protocol === "iop") {
+        const iopMode = request.nextUrl.searchParams.get("iopMode") || "dot-path";
+        const transport =
+          request.nextUrl.searchParams.get("transport") === "form"
+            ? "form"
+            : "json";
+        const params =
+          iopMode === "body-method"
+            ? { method: API_NAME, ...iopApiParams }
+            : iopApiParams;
+        const signed = buildIopParams(API_NAME, params);
+        return NextResponse.json({
+          ok: true,
+          gateway: iopGatewayBase(),
+          url: resolveIopApiUrl(API_NAME, iopMode),
+          method: API_NAME,
+          protocol: "iop",
+          iopMode,
+          transport,
+          publishRequest,
+          redactedPayload: redact(signed),
+        });
+      }
+
+      const signed = buildTopParams(API_NAME, topApiParams);
       return NextResponse.json({
         ok: true,
         gateway,
@@ -146,11 +179,41 @@ async function handle(request: NextRequest) {
       });
     }
 
+    if (protocol === "iop") {
+      const iopMode = request.nextUrl.searchParams.get("iopMode") || "dot-path";
+      const transport =
+        request.nextUrl.searchParams.get("transport") === "form"
+          ? "form"
+          : "json";
+      const result = await callIopApi({
+        apiName: API_NAME,
+        apiParams: iopApiParams,
+        endpointMode: iopMode,
+        transport,
+      });
+      const xml = extractSchemaXml(result.data);
+
+      return NextResponse.json(
+        {
+          ...result,
+          data: redact(result.data),
+          schema: xml
+            ? {
+                hasXml: true,
+                xmlLength: xml.length,
+                summary: summarizeSchema(xml),
+              }
+            : { hasXml: false },
+        },
+        { status: result.ok ? 200 : 502 },
+      );
+    }
+
     let result: Awaited<ReturnType<typeof callTopApi>>;
     try {
       result = await callTopApi({
         method: API_NAME,
-        apiParams,
+        apiParams: topApiParams,
         gatewayUrl: gateway,
       });
     } catch (fetchError) {

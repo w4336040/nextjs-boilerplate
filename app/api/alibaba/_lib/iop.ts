@@ -86,13 +86,34 @@ export function buildIopParams(apiName: string, apiParams: IopParams) {
   return params;
 }
 
+export function resolveIopApiUrl(apiName: string, mode = "dot-path") {
+  const base = iopGatewayBase();
+  const cleanName = apiName.replace(/^\//, "");
+  if (mode === "slash-path") {
+    return `${base}/${cleanName.replace(/\./g, "/")}`;
+  }
+  if (mode === "query-method") {
+    return `${base}?method=${encodeURIComponent(cleanName)}`;
+  }
+  if (mode === "base-only" || mode === "body-method") {
+    return base;
+  }
+  return `${base}/${cleanName}`;
+}
+
 export async function callIopApi(options: {
   apiName: string;
   apiParams: IopParams;
   transport?: "json" | "form";
+  endpointMode?: string;
 }) {
-  const params = buildIopParams(options.apiName, options.apiParams);
-  const url = `${iopGatewayBase()}/${options.apiName}`;
+  const endpointMode = options.endpointMode || "dot-path";
+  const apiParams =
+    endpointMode === "body-method"
+      ? { method: options.apiName, ...options.apiParams }
+      : options.apiParams;
+  const params = buildIopParams(options.apiName, apiParams);
+  const url = resolveIopApiUrl(options.apiName, endpointMode);
   const transport = options.transport || "json";
   const response = await fetch(url, {
     method: "POST",
@@ -129,6 +150,7 @@ export async function callIopApi(options: {
     data,
     sent: {
       apiName: options.apiName,
+      endpointMode,
       transport,
       payloadKeys: Object.keys(params),
       hasAccessToken: Boolean(params.access_token),
@@ -158,4 +180,3 @@ export function redact(value: unknown): unknown {
     }),
   );
 }
-
