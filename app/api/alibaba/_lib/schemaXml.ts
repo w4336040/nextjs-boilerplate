@@ -30,6 +30,8 @@ export type SchemaChecklistItem = {
   type: string;
   group: string;
   reason: string;
+  path?: string[];
+  filled?: boolean;
   optionsPreview?: SchemaOption[];
 };
 
@@ -119,6 +121,8 @@ export function parseSchemaXml(xml: string) {
     const path = [...stack.map((item) => item.name || item.id), name || id].filter(
       Boolean,
     );
+    const value = textContent(ownInner, "value");
+    const hasValueNode = Boolean(value || ownInner.includes("<values>"));
 
     fields.push({
       id,
@@ -129,8 +133,8 @@ export function parseSchemaXml(xml: string) {
       required: rules.some(
         (rule) => rule.name === "requiredRule" && rule.value === "true",
       ),
-      value: textContent(ownInner, "value"),
-      filled: Boolean(textContent(ownInner, "value") || ownInner.includes("<values>")),
+      value,
+      filled: hasValueNode,
       rules,
       options,
     });
@@ -160,6 +164,82 @@ function groupForField(field: SchemaField) {
   return "General";
 }
 
+function normalized(value: string) {
+  return value.trim().toLowerCase();
+}
+
+function pathText(field: Pick<SchemaField, "path">) {
+  return field.path.map(normalized).join(" / ");
+}
+
+function displayName(field: Pick<SchemaField, "id" | "name">) {
+  return field.name || field.id;
+}
+
+function hasMeaningfulValue(field: SchemaField) {
+  return Boolean(field.value.trim()) || field.filled;
+}
+
+function isOptionalTemplateRequired(field: SchemaField) {
+  const path = pathText(field);
+  return (
+    /custommoreproperty_\d+/.test(path) ||
+    /ladderprice_[1-9]\d*/.test(path) ||
+    /ladderperiod_[1-9]\d*/.test(path) ||
+    path.includes("faq") ||
+    field.id === "question" ||
+    field.id === "answers"
+  );
+}
+
+function hasMatchingFilledValue(required: SchemaField, fields: SchemaField[]) {
+  if (hasMeaningfulValue(required)) return true;
+  if (isOptionalTemplateRequired(required)) return true;
+
+  const requiredPath = pathText(required);
+  const requiredName = normalized(displayName(required));
+  const filledFields = fields.filter(hasMeaningfulValue);
+
+  return filledFields.some((field) => {
+    if (field.id !== required.id) return false;
+
+    const filledPath = pathText(field);
+    const filledName = normalized(displayName(field));
+
+    if (requiredName && filledName === requiredName) return true;
+
+    if (required.id.startsWith("p-")) return true;
+
+    if (requiredPath.includes("ladderprice_0")) {
+      return filledPath.includes("ladderprice_0");
+    }
+
+    if (requiredPath.includes("logistics supply mode")) {
+      return filledPath.includes("logistics supply mode");
+    }
+
+    if (
+      groupForField(required) === "Images" ||
+      requiredPath.includes("product images") ||
+      requiredPath.includes("details of the picture")
+    ) {
+      return (
+        filledPath.includes("image") ||
+        filledPath.includes("gallery") ||
+        filledPath.includes("details of the picture")
+      );
+    }
+
+    if (required.id === "price" && requiredName.includes("sample")) {
+      return filledPath.includes("sample");
+    }
+
+    return !["price", "quantity", "range_min", "range_max", "unit_type"].includes(
+      required.id,
+    );
+  });
+}
+
 export function buildSchemaChecklist(fields: SchemaField[]) {
   const seen = new Set<string>();
   return fields
@@ -170,10 +250,11 @@ export function buildSchemaChecklist(fields: SchemaField[]) {
       type: field.type,
       group: groupForField(field),
       reason: "requiredRule=true",
+      path: field.path,
       optionsPreview: field.options.slice(0, 8),
     }))
     .filter((item) => {
-      const key = `${item.group}:${item.id}:${item.name}`;
+      const key = `${item.group}:${item.id}:${item.name}:${(item.path || []).join("/")}`;
       if (seen.has(key)) return false;
       seen.add(key);
       return true;
@@ -181,12 +262,20 @@ export function buildSchemaChecklist(fields: SchemaField[]) {
 }
 
 export function buildProductOptimization(fields: SchemaField[]) {
-  const checklist = buildSchemaChecklist(fields);
-  const fieldById = new Map(fields.map((field) => [field.id, field]));
-  const missingRequired = checklist.filter((item) => {
-    const field = fieldById.get(item.id);
-    return field ? !field.filled : true;
+  const requiredFields = fields.filter((field) => field.required && field.id);
+  const checklist = buildSchemaChecklist(fields).map((item) => {
+    const requiredField = requiredFields.find(
+      (field) =>
+        field.id === item.id &&
+        field.name === item.name &&
+        field.path.join("\u0000") === (item.path || []).join("\u0000"),
+    );
+    return {
+      ...item,
+      filled: requiredField ? hasMatchingFilledValue(requiredField, fields) : false,
+    };
   });
+  const missingRequired = checklist.filter((item) => !item.filled);
   const weakContent = fields.filter((field) => {
     const name = `${field.id} ${field.name}`.toLowerCase();
     return (
@@ -206,6 +295,7 @@ export function buildProductOptimization(fields: SchemaField[]) {
   return {
     missingRequiredCount: missingRequired.length,
     missingRequired: missingRequired.slice(0, 80),
+    filledRequiredCount: checklist.filter((item) => item.filled).length,
     weakContent: weakContent.slice(0, 30).map((field) => ({
       id: field.id,
       name: field.name || field.id,
@@ -224,7 +314,7 @@ export function buildProductOptimization(fields: SchemaField[]) {
       suggestion: "检查 MOQ、阶梯价、样品价、币种和价格区间是否完整。",
     },
     priorities: [
-      "先补齐 missingRequired 中的必填项，避免商品编辑或发布失败。",
+      "先处理 missingRequired 中的真实必填缺失，避免商品编辑或发布失败。",
       "优先优化 Product name、Product keywords、Product images、MOQ、Single Piece price。",
       "再根据商品质量分接口返回的 problem_map 定向修复低质量项。",
     ],
