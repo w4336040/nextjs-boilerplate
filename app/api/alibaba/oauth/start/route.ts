@@ -11,9 +11,17 @@ function requireEnv(key: string) {
   return value;
 }
 
+function buildAuthUrl() {
+  const authUrl = new URL(requireEnv("ALIBABA_AUTH_URL"));
+  if (authUrl.hostname === "oauth.alibaba.com") {
+    return new URL("https://open-api.alibaba.com/oauth/authorize?force_auth=true");
+  }
+  return authUrl;
+}
+
 export async function GET(request: NextRequest) {
   try {
-    const authUrl = new URL(requireEnv("ALIBABA_AUTH_URL"));
+    const authUrl = buildAuthUrl();
     const state = randomUUID();
     const stateParam = process.env.ALIBABA_AUTH_STATE_PARAM || "State";
     const callback = request.nextUrl.searchParams.get("callback");
@@ -26,8 +34,9 @@ export async function GET(request: NextRequest) {
       process.env.ALIBABA_AUTH_CLIENT_ID_PARAM || "client_id",
       requireEnv("ALIBABA_APP_KEY"),
     );
-    for (const alias of (process.env.ALIBABA_AUTH_APP_KEY_ALIASES ||
-      "client_id,appkey,app_key").split(",")) {
+    for (const alias of (process.env.ALIBABA_AUTH_APP_KEY_ALIASES || "").split(
+      ",",
+    )) {
       const key = alias.trim();
       if (key) {
         authUrl.searchParams.set(key, requireEnv("ALIBABA_APP_KEY"));
