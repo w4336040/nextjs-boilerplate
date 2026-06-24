@@ -1,5 +1,6 @@
 import crypto from "crypto";
 import { NextRequest } from "next/server";
+import { readStoredToken } from "./tokenStore";
 
 export type IopParams = Record<string, string>;
 
@@ -44,6 +45,13 @@ export function getAccessTokenFromRequest(request: NextRequest) {
   if (!cookie) return "";
   const token = decryptTokenCookie(cookie);
   return findTokenValue(token, ["access_token", "accessToken"]);
+}
+
+export async function getAccessTokenFromStorageOrRequest(request: NextRequest) {
+  const stored = await readStoredToken();
+  const storedToken = findTokenValue(stored, ["access_token", "accessToken"]);
+  if (storedToken) return storedToken;
+  return getAccessTokenFromRequest(request);
 }
 
 export function findTokenValue(value: unknown, keys: string[]): string {
