@@ -1,6 +1,6 @@
 import { createCipheriv, createHash, createHmac, randomBytes } from "crypto";
 import { NextRequest, NextResponse } from "next/server";
-import { writeStoredToken } from "../../../_lib/tokenStore";
+import { writeStoredToken } from "../../_lib/tokenStore";
 
 export const runtime = "nodejs";
 
