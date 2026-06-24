@@ -1,0 +1,1221 @@
+{
+  "id": 2,
+  "title": "获得单个商品详情",
+  "path": "alibaba.icbu.product.get",
+  "method": "GET/POST",
+  "authType": 1,
+  "desc": "获取商品详情",
+  "common": [
+    {
+      "treeId": null,
+      "data": [],
+      "children": [],
+      "name": "app_key",
+      "id": null,
+      "type": "String",
+      "required": true,
+      "desc": "Unique app ID issued by ICBU Open Platform console when you apply for an app category"
+    },
+    {
+      "treeId": null,
+      "data": [],
+      "children": [],
+      "name": "timestamp",
+      "id": null,
+      "type": "String",
+      "required": true,
+      "desc": "The time stamp of the request e.g. 1517820392000 (which translates to 5 February 2018 08:46:32) with less than 7200s difference from UTC time"
+    },
+    {
+      "treeId": null,
+      "data": [],
+      "children": [],
+      "name": "access_token",
+      "id": null,
+      "type": "String",
+      "required": true,
+      "desc": "API interface call credentials"
+    },
+    {
+      "treeId": null,
+      "data": [],
+      "children": [],
+      "name": "sign_method",
+      "id": null,
+      "type": "String",
+      "required": true,
+      "desc": "The HMAC hash algorithm you are using to calculate your signature"
+    },
+    {
+      "treeId": null,
+      "data": [],
+      "children": [],
+      "name": "sign",
+      "id": null,
+      "type": "String",
+      "required": true,
+      "desc": "Part of the authentication process that is used for identifying and verifying who is sending a request (click <a target='_blank' href='https://open.alibaba.com/doc.htm?docId=107468&docType=1'>here</a> for details)"
+    }
+  ],
+  "parameters": [
+    {
+      "treeId": 3553799,
+      "data": [],
+      "children": [],
+      "name": "product_id",
+      "id": 170,
+      "type": "String",
+      "required": false,
+      "desc": "加密后的产品ID"
+    },
+    {
+      "treeId": 3553800,
+      "data": [],
+      "children": [],
+      "name": "language",
+      "id": 170,
+      "type": "String",
+      "required": true,
+      "desc": "商品语种，目前只支持ENGLISH"
+    }
+  ],
+  "output": [
+    {
+      "treeId": 3553804,
+      "data": [],
+      "children": [
+        {
+          "treeId": 3553805,
+          "data": [],
+          "children": [],
+          "name": "gmt_create",
+          "id": 172,
+          "type": "String",
+          "required": false,
+          "desc": "产品创建时间"
+        },
+        {
+          "treeId": 3553806,
+          "data": [],
+          "children": [],
+          "name": "sub_market_type",
+          "id": 172,
+          "type": "String",
+          "required": false,
+          "desc": "子市场：traded / customization"
+        },
+        {
+          "treeId": 3553807,
+          "data": [],
+          "children": [
+            {
+              "treeId": 3553808,
+              "data": [],
+              "children": [],
+              "name": "company_summary",
+              "id": 172,
+              "type": "String",
+              "required": false,
+              "desc": "公司描述信息"
+            },
+            {
+              "treeId": 3553809,
+              "data": [],
+              "children": [],
+              "name": "product_summary",
+              "id": 172,
+              "type": "String",
+              "required": false,
+              "desc": "商品卖点"
+            },
+            {
+              "treeId": 3553810,
+              "data": [],
+              "children": [
+                {
+                  "treeId": 3553811,
+                  "data": [],
+                  "children": [],
+                  "name": "question",
+                  "id": 172,
+                  "type": "String",
+                  "required": false,
+                  "desc": "问题"
+                },
+                {
+                  "treeId": 3553812,
+                  "data": [],
+                  "children": [],
+                  "name": "answer",
+                  "id": 172,
+                  "type": "String",
+                  "required": false,
+                  "desc": "答案"
+                }
+              ],
+              "name": "product_faq",
+              "id": 172,
+              "type": "Object[]",
+              "required": false,
+              "desc": "商品FAQ"
+            },
+            {
+              "treeId": 3553813,
+              "data": [],
+              "children": [
+                {
+                  "treeId": 3553814,
+                  "data": [],
+                  "children": [
+                    {
+                      "treeId": 3553815,
+                      "data": [],
+                      "children": [],
+                      "name": "image_url",
+                      "id": 172,
+                      "type": "String",
+                      "required": false,
+                      "desc": "图片URL"
+                    },
+                    {
+                      "treeId": 3553816,
+                      "data": [],
+                      "children": [],
+                      "name": "image_text",
+                      "id": 172,
+                      "type": "String",
+                      "required": false,
+                      "desc": "图片文本描述"
+                    },
+                    {
+                      "treeId": 3553817,
+                      "data": [],
+                      "children": [
+                        {
+                          "treeId": 3553818,
+                          "data": [],
+                          "children": [],
+                          "name": "id",
+                          "id": 172,
+                          "type": "Number",
+                          "required": false,
+                          "desc": "图集ID"
+                        },
+                        {
+                          "treeId": 3553819,
+                          "data": [],
+                          "children": [],
+                          "name": "name",
+                          "id": 172,
+                          "type": "String",
+                          "required": false,
+                          "desc": "图集名称"
+                        },
+                        {
+                          "treeId": 3553820,
+                          "data": [],
+                          "children": [],
+                          "name": "order",
+                          "id": 172,
+                          "type": "String",
+                          "required": false,
+                          "desc": "图集顺序"
+                        }
+                      ],
+                      "name": "image_set",
+                      "id": 172,
+                      "type": "Object",
+                      "required": false,
+                      "desc": "图集"
+                    }
+                  ],
+                  "name": "images",
+                  "id": 172,
+                  "type": "Object[]",
+                  "required": false,
+                  "desc": "图片列表"
+                }
+              ],
+              "name": "company_image",
+              "id": 172,
+              "type": "Object",
+              "required": false,
+              "desc": "公司图片"
+            },
+            {
+              "treeId": 3553821,
+              "data": [],
+              "children": [
+                {
+                  "treeId": 3553822,
+                  "data": [],
+                  "children": [
+                    {
+                      "treeId": 3553823,
+                      "data": [],
+                      "children": [],
+                      "name": "image_url",
+                      "id": 172,
+                      "type": "String",
+                      "required": false,
+                      "desc": "图片URL"
+                    },
+                    {
+                      "treeId": 3553824,
+                      "data": [],
+                      "children": [],
+                      "name": "image_text",
+                      "id": 172,
+                      "type": "String",
+                      "required": false,
+                      "desc": "图片文本描述"
+                    },
+                    {
+                      "treeId": 3553825,
+                      "data": [],
+                      "children": [
+                        {
+                          "treeId": 3553826,
+                          "data": [],
+                          "children": [],
+                          "name": "id",
+                          "id": 172,
+                          "type": "String",
+                          "required": false,
+                          "desc": "图集ID"
+                        },
+                        {
+                          "treeId": 3553827,
+                          "data": [],
+                          "children": [],
+                          "name": "name",
+                          "id": 172,
+                          "type": "String",
+                          "required": false,
+                          "desc": "图集名称"
+                        },
+                        {
+                          "treeId": 3553828,
+                          "data": [],
+                          "children": [],
+                          "name": "order",
+                          "id": 172,
+                          "type": "String",
+                          "required": false,
+                          "desc": "图集顺序"
+                        }
+                      ],
+                      "name": "image_set",
+                      "id": 172,
+                      "type": "Object",
+                      "required": false,
+                      "desc": "图集"
+                    }
+                  ],
+                  "name": "images",
+                  "id": 172,
+                  "type": "Object[]",
+                  "required": false,
+                  "desc": "图片列表"
+                }
+              ],
+              "name": "detail_image",
+              "id": 172,
+              "type": "Object",
+              "required": false,
+              "desc": "产品详情图片"
+            }
+          ],
+          "name": "struct_detail",
+          "id": 172,
+          "type": "Object",
+          "required": false,
+          "desc": "结构化详描"
+        },
+        {
+          "treeId": 3553917,
+          "data": [],
+          "children": [],
+          "name": "struct_detail_product",
+          "id": 172,
+          "type": "Boolean",
+          "required": false,
+          "desc": "是否结构化详情商品"
+        },
+        {
+          "treeId": 3553829,
+          "data": [],
+          "children": [],
+          "name": "category_id",
+          "id": 172,
+          "type": "Number",
+          "required": false,
+          "desc": "类目ID"
+        },
+        {
+          "treeId": 3553830,
+          "data": [],
+          "children": [],
+          "name": "group_id",
+          "id": 172,
+          "type": "Number",
+          "required": false,
+          "desc": "商品分组ID"
+        },
+        {
+          "treeId": 3553831,
+          "data": [],
+          "children": [],
+          "name": "subject",
+          "id": 172,
+          "type": "String",
+          "required": false,
+          "desc": "商品名称"
+        },
+        {
+          "treeId": 3553832,
+          "data": [],
+          "children": [],
+          "name": "status",
+          "id": 172,
+          "type": "String",
+          "required": false,
+          "desc": "status 的值：sketch：草稿，approved：审核通过，tbd：审核不通过，new 、modified ：审核中"
+        },
+        {
+          "treeId": 3553833,
+          "data": [],
+          "children": [],
+          "name": "keywords",
+          "id": 172,
+          "type": "String[]",
+          "required": false,
+          "desc": "关键词"
+        },
+        {
+          "treeId": 3553834,
+          "data": [],
+          "children": [
+            {
+              "treeId": 3553835,
+              "data": [],
+              "children": [],
+              "name": "attribute_id",
+              "id": 172,
+              "type": "Number",
+              "required": false,
+              "desc": "属性ID"
+            },
+            {
+              "treeId": 3553836,
+              "data": [],
+              "children": [],
+              "name": "attribute_name",
+              "id": 172,
+              "type": "String",
+              "required": false,
+              "desc": "属性名称"
+            },
+            {
+              "treeId": 3553837,
+              "data": [],
+              "children": [],
+              "name": "value_id",
+              "id": 172,
+              "type": "Number",
+              "required": false,
+              "desc": "属性值ID"
+            },
+            {
+              "treeId": 3553838,
+              "data": [],
+              "children": [],
+              "name": "value_name",
+              "id": 172,
+              "type": "String",
+              "required": false,
+              "desc": "属性值名称"
+            },
+            {
+              "treeId": 3553839,
+              "data": [],
+              "children": [],
+              "name": "sku_custom_image_url",
+              "id": 172,
+              "type": "String",
+              "required": false,
+              "desc": "作为sku属性值时，用图形来显示；必须是alibaba图片中心的图片URL，请使用alibaba.icbu.photobank.upload上传图片"
+            },
+            {
+              "treeId": 3553840,
+              "data": [],
+              "children": [],
+              "name": "sku_custom_value_name",
+              "id": 172,
+              "type": "String",
+              "required": false,
+              "desc": "作为sku属性值时，自定义属性值名称"
+            }
+          ],
+          "name": "attributes",
+          "id": 172,
+          "type": "Object[]",
+          "required": false,
+          "desc": "商品属性"
+        },
+        {
+          "treeId": 3553841,
+          "data": [],
+          "children": [
+            {
+              "treeId": 3553842,
+              "data": [],
+              "children": [],
+              "name": "images",
+              "id": 172,
+              "type": "String[]",
+              "required": false,
+              "desc": "alibaba图片中心的图片URL列表，请使用alibaba.icbu.photobank.upload接口上传图片"
+            },
+            {
+              "treeId": 3553843,
+              "data": [],
+              "children": [],
+              "name": "watermark",
+              "id": 172,
+              "type": "Boolean",
+              "required": false,
+              "desc": "是否打水印，是(true)或否(false)"
+            },
+            {
+              "treeId": 3553844,
+              "data": [],
+              "children": [],
+              "name": "watermark_frame",
+              "id": 172,
+              "type": "String",
+              "required": false,
+              "desc": "水印是否有边框，有边框(Y)或者无边框(N)"
+            },
+            {
+              "treeId": 3553845,
+              "data": [],
+              "children": [],
+              "name": "watermark_position",
+              "id": 172,
+              "type": "String",
+              "required": false,
+              "desc": "水印位置，在中间(center)或者在底部(bottom)"
+            }
+          ],
+          "name": "main_image",
+          "id": 172,
+          "type": "Object",
+          "required": false,
+          "desc": "商品的主图"
+        },
+        {
+          "treeId": 3553846,
+          "data": [],
+          "children": [
+            {
+              "treeId": 3553847,
+              "data": [],
+              "children": [],
+              "name": "fob_currency",
+              "id": 172,
+              "type": "String",
+              "required": false,
+              "desc": "FOB价格货币，参见FAQ 货币枚举值"
+            },
+            {
+              "treeId": 3553848,
+              "data": [],
+              "children": [],
+              "name": "fob_min_price",
+              "id": 172,
+              "type": "String",
+              "required": false,
+              "desc": "FOB最小价格"
+            },
+            {
+              "treeId": 3553849,
+              "data": [],
+              "children": [],
+              "name": "fob_max_price",
+              "id": 172,
+              "type": "String",
+              "required": false,
+              "desc": "FOB最大价格"
+            },
+            {
+              "treeId": 3553850,
+              "data": [],
+              "children": [],
+              "name": "fob_unit_type",
+              "id": 172,
+              "type": "String",
+              "required": false,
+              "desc": "FOB计量单位，参见FAQ 计量单位枚举值"
+            },
+            {
+              "treeId": 3553851,
+              "data": [],
+              "children": [],
+              "name": "payment_methods",
+              "id": 172,
+              "type": "String[]",
+              "required": false,
+              "desc": "付款方式，参见FAQ 付款方式枚举值"
+            },
+            {
+              "treeId": 3553852,
+              "data": [],
+              "children": [],
+              "name": "min_order_quantity",
+              "id": 172,
+              "type": "String",
+              "required": false,
+              "desc": "最小起订量"
+            },
+            {
+              "treeId": 3553853,
+              "data": [],
+              "children": [],
+              "name": "min_order_unit_type",
+              "id": 172,
+              "type": "String",
+              "required": false,
+              "desc": "最小起订量计量单位，参见FAQ 计量单位枚举值"
+            },
+            {
+              "treeId": 3553854,
+              "data": [],
+              "children": [],
+              "name": "supply_quantity",
+              "id": 172,
+              "type": "String",
+              "required": false,
+              "desc": "供货能力"
+            },
+            {
+              "treeId": 3553855,
+              "data": [],
+              "children": [],
+              "name": "supply_unit_type",
+              "id": 172,
+              "type": "String",
+              "required": false,
+              "desc": "供货能力计量单位，参见FAQ 计量单位枚举值"
+            },
+            {
+              "treeId": 3553856,
+              "data": [],
+              "children": [],
+              "name": "supply_period_type",
+              "id": 172,
+              "type": "String",
+              "required": false,
+              "desc": "供货能力周期，参见FAQ 时间周期枚举值"
+            },
+            {
+              "treeId": 3553857,
+              "data": [],
+              "children": [],
+              "name": "delivery_port",
+              "id": 172,
+              "type": "String",
+              "required": false,
+              "desc": "发货港口"
+            },
+            {
+              "treeId": 3553858,
+              "data": [],
+              "children": [],
+              "name": "delivery_time",
+              "id": 172,
+              "type": "String",
+              "required": false,
+              "desc": "发货期限"
+            },
+            {
+              "treeId": 3553859,
+              "data": [],
+              "children": [],
+              "name": "packaging_desc",
+              "id": 172,
+              "type": "String",
+              "required": false,
+              "desc": "常规包装"
+            },
+            {
+              "treeId": 3553860,
+              "data": [],
+              "children": [
+                {
+                  "treeId": 3553861,
+                  "data": [],
+                  "children": [],
+                  "name": "quantity",
+                  "id": 172,
+                  "type": "Number",
+                  "required": false,
+                  "desc": "《=最大订购量"
+                },
+                {
+                  "treeId": 3553862,
+                  "data": [],
+                  "children": [],
+                  "name": "process_period",
+                  "id": 172,
+                  "type": "Number",
+                  "required": false,
+                  "desc": "发货时间"
+                }
+              ],
+              "name": "deliver_periods",
+              "id": 172,
+              "type": "Object[]",
+              "required": false,
+              "desc": "阶梯交期"
+            }
+          ],
+          "name": "sourcing_trade",
+          "id": 172,
+          "type": "Object",
+          "required": false,
+          "desc": "询盘商品交易信息"
+        },
+        {
+          "treeId": 3553863,
+          "data": [],
+          "children": [
+            {
+              "treeId": 3553864,
+              "data": [],
+              "children": [],
+              "name": "unit_type",
+              "id": 172,
+              "type": "String",
+              "required": false,
+              "desc": "最小计量单位，参见FAQ 计量单位枚举值"
+            },
+            {
+              "treeId": 3553865,
+              "data": [],
+              "children": [],
+              "name": "sale_type",
+              "id": 172,
+              "type": "String",
+              "required": false,
+              "desc": "销售方式，按件卖(normal)或者按批卖(batch)"
+            },
+            {
+              "treeId": 3553866,
+              "data": [],
+              "children": [],
+              "name": "batch_number",
+              "id": 172,
+              "type": "Number",
+              "required": false,
+              "desc": "每批数量，当sale_type=batch时生效，范围是1-99999"
+            },
+            {
+              "treeId": 3553867,
+              "data": [],
+              "children": [],
+              "name": "price",
+              "id": 172,
+              "type": "String",
+              "required": false,
+              "desc": "价格，单位是美元，精确到小数点后两位，范围是0.01-9999999.00"
+            },
+            {
+              "treeId": 3553868,
+              "data": [],
+              "children": [],
+              "name": "package_size",
+              "id": 172,
+              "type": "String",
+              "required": false,
+              "desc": "尺寸，单位是厘米，长宽高范围是1-9999999"
+            },
+            {
+              "treeId": 3553869,
+              "data": [],
+              "children": [],
+              "name": "volume",
+              "id": 172,
+              "type": "Number",
+              "required": false,
+              "desc": "体积，单位是立方厘米，范围是1-9999999"
+            },
+            {
+              "treeId": 3553870,
+              "data": [],
+              "children": [],
+              "name": "weight",
+              "id": 172,
+              "type": "String",
+              "required": false,
+              "desc": "重量，单位是kg，精确到小数点后三位，范围是0.01-9999999.000"
+            },
+            {
+              "treeId": 3553871,
+              "data": [],
+              "children": [],
+              "name": "min_order_quantity",
+              "id": 172,
+              "type": "Number",
+              "required": false,
+              "desc": "最小起订量，必须是batch_number的整数倍，范围是1-99999"
+            },
+            {
+              "treeId": 3553872,
+              "data": [],
+              "children": [],
+              "name": "shipping_line_template_id",
+              "id": 172,
+              "type": "Number",
+              "required": false,
+              "desc": "运费模板ID"
+            },
+            {
+              "treeId": 3553873,
+              "data": [],
+              "children": [],
+              "name": "handling_time",
+              "id": 172,
+              "type": "Number",
+              "required": false,
+              "desc": "备货期，单位是天，范围是1-60"
+            },
+            {
+              "treeId": 3553874,
+              "data": [],
+              "children": [
+                {
+                  "treeId": 3553875,
+                  "data": [],
+                  "children": [],
+                  "name": "quantity",
+                  "id": 172,
+                  "type": "Number",
+                  "required": false,
+                  "desc": "最大订购量"
+                },
+                {
+                  "treeId": 3553876,
+                  "data": [],
+                  "children": [],
+                  "name": "process_period",
+                  "id": 172,
+                  "type": "Number",
+                  "required": false,
+                  "desc": "发货时间"
+                }
+              ],
+              "name": "deliver_periods",
+              "id": 172,
+              "type": "Object[]",
+              "required": false,
+              "desc": "阶梯交期"
+            }
+          ],
+          "name": "wholesale_trade",
+          "id": 172,
+          "type": "Object",
+          "required": false,
+          "desc": "在线批发商品交易信息"
+        },
+        {
+          "treeId": 3553877,
+          "data": [],
+          "children": [
+            {
+              "treeId": 3553878,
+              "data": [],
+              "children": [
+                {
+                  "treeId": 3553879,
+                  "data": [],
+                  "children": [],
+                  "name": "attribute_name",
+                  "id": 172,
+                  "type": "String",
+                  "required": false,
+                  "desc": "属性名称"
+                },
+                {
+                  "treeId": 3553880,
+                  "data": [],
+                  "children": [
+                    {
+                      "treeId": 3553881,
+                      "data": [],
+                      "children": [],
+                      "name": "system_value_name",
+                      "id": 172,
+                      "type": "String",
+                      "required": false,
+                      "desc": "默认的属性值名称"
+                    },
+                    {
+                      "treeId": 3553882,
+                      "data": [],
+                      "children": [],
+                      "name": "image_url",
+                      "id": 172,
+                      "type": "String",
+                      "required": false,
+                      "desc": "自定义的图片URL"
+                    },
+                    {
+                      "treeId": 3553883,
+                      "data": [],
+                      "children": [],
+                      "name": "mark_info",
+                      "id": 172,
+                      "type": "String",
+                      "required": false,
+                      "desc": "默认的展示样式"
+                    },
+                    {
+                      "treeId": 3553884,
+                      "data": [],
+                      "children": [],
+                      "name": "value_id",
+                      "id": 172,
+                      "type": "Number",
+                      "required": false,
+                      "desc": "属性值ID"
+                    },
+                    {
+                      "treeId": 3553885,
+                      "data": [],
+                      "children": [],
+                      "name": "custom_value_name",
+                      "id": 172,
+                      "type": "String",
+                      "required": false,
+                      "desc": "自定义的属性值名称"
+                    }
+                  ],
+                  "name": "values",
+                  "id": 172,
+                  "type": "Object[]",
+                  "required": false,
+                  "desc": "属性下的值"
+                },
+                {
+                  "treeId": 3553886,
+                  "data": [],
+                  "children": [],
+                  "name": "attribute_id",
+                  "id": 172,
+                  "type": "Number",
+                  "required": false,
+                  "desc": "属性ID"
+                }
+              ],
+              "name": "sku_attributes",
+              "id": 172,
+              "type": "Object[]",
+              "required": false,
+              "desc": "SKU使用的属性"
+            },
+            {
+              "treeId": 3553887,
+              "data": [],
+              "children": [
+                {
+                  "treeId": 3553888,
+                  "data": [],
+                  "children": [],
+                  "name": "countrySku",
+                  "id": 172,
+                  "type": "String",
+                  "required": false,
+                  "desc": "国家纬度sku编码、价格等信息"
+                },
+                {
+                  "treeId": 3553889,
+                  "data": [],
+                  "children": [
+                    {
+                      "treeId": 3553890,
+                      "data": [],
+                      "children": [],
+                      "name": "start_quantity",
+                      "id": 172,
+                      "type": "Number",
+                      "required": false,
+                      "desc": "起始数量，范围是1-99999"
+                    },
+                    {
+                      "treeId": 3553891,
+                      "data": [],
+                      "children": [],
+                      "name": "price",
+                      "id": 172,
+                      "type": "String",
+                      "required": false,
+                      "desc": "价格，范围是0.01-9999999.00"
+                    }
+                  ],
+                  "name": "bulk_discount_prices",
+                  "id": 172,
+                  "type": "Object[]",
+                  "required": false,
+                  "desc": "根据订单数量设置折扣价"
+                },
+                {
+                  "treeId": 3553892,
+                  "data": [],
+                  "children": [],
+                  "name": "attr2_value",
+                  "id": 172,
+                  "type": "String",
+                  "required": false,
+                  "desc": "attr2Value"
+                },
+                {
+                  "treeId": 3553893,
+                  "data": [],
+                  "children": [],
+                  "name": "sku_code",
+                  "id": 172,
+                  "type": "String",
+                  "required": false,
+                  "desc": "商品的SKU编码"
+                },
+                {
+                  "treeId": 3553894,
+                  "data": [],
+                  "children": [],
+                  "name": "sku_id",
+                  "id": 172,
+                  "type": "Number",
+                  "required": false,
+                  "desc": "商品的SKUid，唯一标识SKU"
+                },
+                {
+                  "treeId": 3553895,
+                  "data": [],
+                  "children": [
+                    {
+                      "treeId": 3553896,
+                      "data": [],
+                      "children": [],
+                      "name": "store_code",
+                      "id": 172,
+                      "type": "String",
+                      "required": false,
+                      "desc": "库存编码，为空时表示默认国内仓"
+                    },
+                    {
+                      "treeId": 3553897,
+                      "data": [],
+                      "children": [],
+                      "name": "inventory",
+                      "id": 172,
+                      "type": "Number",
+                      "required": false,
+                      "desc": "库存值"
+                    }
+                  ],
+                  "name": "inventory_dto_list",
+                  "id": 172,
+                  "type": "Object[]",
+                  "required": false,
+                  "desc": "商品的库存列表"
+                }
+              ],
+              "name": "skus",
+              "id": 172,
+              "type": "Object[]",
+              "required": false,
+              "desc": "SKU定义"
+            }
+          ],
+          "name": "product_sku",
+          "id": 172,
+          "type": "Object",
+          "required": false,
+          "desc": "商品SKU"
+        },
+        {
+          "treeId": 3553898,
+          "data": [],
+          "children": [],
+          "name": "description",
+          "id": 172,
+          "type": "String",
+          "required": false,
+          "desc": "商品详情描述"
+        },
+        {
+          "treeId": 3553899,
+          "data": [],
+          "children": [],
+          "name": "product_type",
+          "id": 172,
+          "type": "String",
+          "required": false,
+          "desc": "商品类型"
+        },
+        {
+          "treeId": 3553900,
+          "data": [],
+          "children": [],
+          "name": "language",
+          "id": 172,
+          "type": "String",
+          "required": false,
+          "desc": "语种"
+        },
+        {
+          "treeId": 3553901,
+          "data": [],
+          "children": [],
+          "name": "product_id",
+          "id": 172,
+          "type": "String",
+          "required": false,
+          "desc": "产品ID"
+        },
+        {
+          "treeId": 3553904,
+          "data": [],
+          "children": [],
+          "name": "owner_member",
+          "id": 172,
+          "type": "Number",
+          "required": false,
+          "desc": "产品负责人"
+        },
+        {
+          "treeId": 3553905,
+          "data": [],
+          "children": [],
+          "name": "display",
+          "id": 172,
+          "type": "String",
+          "required": false,
+          "desc": "Y为上架状态"
+        },
+        {
+          "treeId": 3553906,
+          "data": [],
+          "children": [],
+          "name": "gmt_modified",
+          "id": 172,
+          "type": "String",
+          "required": false,
+          "desc": "产品更新时间"
+        },
+        {
+          "treeId": 3553907,
+          "data": [],
+          "children": [],
+          "name": "owner_member_display_name",
+          "id": 172,
+          "type": "String",
+          "required": false,
+          "desc": "产品负责人显示名，由firstname和lastname拼接组成"
+        },
+        {
+          "treeId": 3553908,
+          "data": [],
+          "children": [
+            {
+              "treeId": 3553909,
+              "data": [],
+              "children": [
+                {
+                  "treeId": 3553910,
+                  "data": [],
+                  "children": [],
+                  "name": "custom_type",
+                  "id": 172,
+                  "type": "String",
+                  "required": false,
+                  "desc": "定制类型"
+                },
+                {
+                  "treeId": 3553911,
+                  "data": [],
+                  "children": [],
+                  "name": "min_order_quantity",
+                  "id": 172,
+                  "type": "Number",
+                  "required": false,
+                  "desc": "定制最小起订量"
+                }
+              ],
+              "name": "custom_contents",
+              "id": 172,
+              "type": "Object[]",
+              "required": false,
+              "desc": "定制项"
+            }
+          ],
+          "name": "custom_info",
+          "id": 172,
+          "type": "Object",
+          "required": false,
+          "desc": "定制信息"
+        },
+        {
+          "treeId": 3553912,
+          "data": [],
+          "children": [],
+          "name": "is_smart_edit",
+          "id": 172,
+          "type": "Boolean",
+          "required": false,
+          "desc": "是否是智能编辑"
+        },
+        {
+          "treeId": 3553913,
+          "data": [],
+          "children": [],
+          "name": "price_type",
+          "id": 172,
+          "type": "String",
+          "required": false,
+          "desc": "/**      * SKU价      */     SKU_PRICE(\"sku_price\"),     /**      * 阶梯价      */     LADDER_PRICE(\"ladder_price\"),     /**      * fob价: 单一区间fob价      */     FOB_PRICE(\"fob_price\");"
+        },
+        {
+          "treeId": 3553914,
+          "data": [],
+          "children": [],
+          "name": "pc_detail_url",
+          "id": 172,
+          "type": "String",
+          "required": false,
+          "desc": "https://www.alibaba.com/product-detail/Short-Umbrella-Girls-Black-Lace-Polka_1600107214049.html?spm=a2700.galleryofferlist.normalList.12.6c612db4ueHAW2"
+        },
+        {
+          "treeId": 3553915,
+          "data": [],
+          "children": [],
+          "name": "rts",
+          "id": 172,
+          "type": "Boolean",
+          "required": false,
+          "desc": "是否是有效rts"
+        }
+      ],
+      "name": "product",
+      "id": 172,
+      "type": "Object",
+      "required": false,
+      "desc": "单个商品详情"
+    }
+  ],
+  "exampleKeys": [
+    "data",
+    "id"
+  ]
+}

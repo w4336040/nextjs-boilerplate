@@ -85,3 +85,26 @@ POST /api/alibaba/product/schema/parse
 ```
 
 This is useful for debugging saved schema XML without calling Alibaba again.
+
+## Product Optimization Foundation
+
+Render one product into schema + current values:
+
+```text
+https://api.viecart.com/api/alibaba/product/schema/render?product_id=1601815992580&cat_id=333&language=en_US&publish_type=default
+```
+
+Query product quality score:
+
+```text
+https://api.viecart.com/api/alibaba/product/score?product_id=1601815992580
+```
+
+Aggregate read-only optimization diagnosis:
+
+```text
+https://api.viecart.com/api/alibaba/product/optimize?product_id=1601815992580&cat_id=333&language=en_US&publish_type=default
+```
+
+The optimization endpoint is read-only. It does not edit or publish products.
+Future write operations must show a field diff and wait for explicit approval.

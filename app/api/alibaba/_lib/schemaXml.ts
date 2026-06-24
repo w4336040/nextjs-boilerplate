@@ -18,6 +18,8 @@ export type SchemaField = {
   depth: number;
   path: string[];
   required: boolean;
+  value: string;
+  filled: boolean;
   rules: SchemaRule[];
   options: SchemaOption[];
 };
@@ -46,6 +48,11 @@ function attrsToRecord(attrs: string) {
 
 function stripNestedFields(inner: string) {
   return inner.replace(/<fields>[\s\S]*?<\/fields>/g, "");
+}
+
+function textContent(xml: string, tag: string) {
+  const found = xml.match(new RegExp(`<${tag}\\b[^>]*>([\\s\\S]*?)<\\/${tag}>`));
+  return found?.[1]?.replace(/<[^>]*>/g, "").trim() || "";
 }
 
 function getDirectFieldInner(xml: string, openEnd: number) {
@@ -122,6 +129,8 @@ export function parseSchemaXml(xml: string) {
       required: rules.some(
         (rule) => rule.name === "requiredRule" && rule.value === "true",
       ),
+      value: textContent(ownInner, "value"),
+      filled: Boolean(textContent(ownInner, "value") || ownInner.includes("<values>")),
       rules,
       options,
     });
@@ -169,6 +178,57 @@ export function buildSchemaChecklist(fields: SchemaField[]) {
       seen.add(key);
       return true;
     });
+}
+
+export function buildProductOptimization(fields: SchemaField[]) {
+  const checklist = buildSchemaChecklist(fields);
+  const fieldById = new Map(fields.map((field) => [field.id, field]));
+  const missingRequired = checklist.filter((item) => {
+    const field = fieldById.get(item.id);
+    return field ? !field.filled : true;
+  });
+  const weakContent = fields.filter((field) => {
+    const name = `${field.id} ${field.name}`.toLowerCase();
+    return (
+      (name.includes("title") || name.includes("keyword") || name.includes("summary")) &&
+      (!field.value || field.value.length < 20)
+    );
+  });
+  const imageFields = fields.filter((field) => {
+    const name = `${field.id} ${field.name}`.toLowerCase();
+    return name.includes("image") || name.includes("gallery");
+  });
+  const priceFields = fields.filter((field) => {
+    const name = `${field.id} ${field.name}`.toLowerCase();
+    return name.includes("price") || name.includes("moq") || name.includes("quantity");
+  });
+
+  return {
+    missingRequiredCount: missingRequired.length,
+    missingRequired: missingRequired.slice(0, 80),
+    weakContent: weakContent.slice(0, 30).map((field) => ({
+      id: field.id,
+      name: field.name || field.id,
+      path: field.path,
+      valueLength: field.value.length,
+      suggestion: "补充更完整的英文标题、关键词或卖点文本。",
+    })),
+    imageCoverage: {
+      fieldCount: imageFields.length,
+      filledCount: imageFields.filter((field) => field.filled).length,
+      suggestion: "检查主图、详情图、场景图、细节图是否齐全且清晰。",
+    },
+    pricingCoverage: {
+      fieldCount: priceFields.length,
+      filledCount: priceFields.filter((field) => field.filled).length,
+      suggestion: "检查 MOQ、阶梯价、样品价、币种和价格区间是否完整。",
+    },
+    priorities: [
+      "先补齐 missingRequired 中的必填项，避免商品编辑或发布失败。",
+      "优先优化 Product name、Product keywords、Product images、MOQ、Single Piece price。",
+      "再根据商品质量分接口返回的 problem_map 定向修复低质量项。",
+    ],
+  };
 }
 
 export function summarizeParsedSchema(fields: SchemaField[]) {

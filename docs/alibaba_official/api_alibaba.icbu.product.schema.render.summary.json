@@ -1,0 +1,179 @@
+{
+  "id": 112,
+  "title": "（新）获取商品信息",
+  "path": "alibaba.icbu.product.schema.render",
+  "method": "GET/POST",
+  "authType": 1,
+  "desc": "获取ICBU商品发布的字段填写规则和单个商品对应填写数据，适用于单个商品编辑场景，不包括草稿。",
+  "common": [
+    {
+      "treeId": null,
+      "data": [],
+      "children": [],
+      "name": "app_key",
+      "id": null,
+      "type": "String",
+      "required": true,
+      "desc": "Unique app ID issued by ICBU Open Platform console when you apply for an app category"
+    },
+    {
+      "treeId": null,
+      "data": [],
+      "children": [],
+      "name": "timestamp",
+      "id": null,
+      "type": "String",
+      "required": true,
+      "desc": "The time stamp of the request e.g. 1517820392000 (which translates to 5 February 2018 08:46:32) with less than 7200s difference from UTC time"
+    },
+    {
+      "treeId": null,
+      "data": [],
+      "children": [],
+      "name": "access_token",
+      "id": null,
+      "type": "String",
+      "required": true,
+      "desc": "API interface call credentials"
+    },
+    {
+      "treeId": null,
+      "data": [],
+      "children": [],
+      "name": "sign_method",
+      "id": null,
+      "type": "String",
+      "required": true,
+      "desc": "The HMAC hash algorithm you are using to calculate your signature"
+    },
+    {
+      "treeId": null,
+      "data": [],
+      "children": [],
+      "name": "sign",
+      "id": null,
+      "type": "String",
+      "required": true,
+      "desc": "Part of the authentication process that is used for identifying and verifying who is sending a request (click <a target='_blank' href='https://open.alibaba.com/doc.htm?docId=107468&docType=1'>here</a> for details)"
+    }
+  ],
+  "parameters": [
+    {
+      "treeId": 3548350,
+      "data": [],
+      "children": [
+        {
+          "treeId": 3548351,
+          "data": [],
+          "children": [],
+          "name": "version",
+          "id": 385,
+          "type": "String",
+          "required": false,
+          "desc": "发品表单版本号"
+        },
+        {
+          "treeId": 3548383,
+          "data": [],
+          "children": [],
+          "name": "publish_type",
+          "id": 385,
+          "type": "String",
+          "required": false,
+          "desc": "default 普通品、overseastock 海外现货"
+        },
+        {
+          "treeId": 3548353,
+          "data": [],
+          "children": [],
+          "name": "cat_id",
+          "id": 385,
+          "type": "Number",
+          "required": false,
+          "desc": "类目id"
+        },
+        {
+          "treeId": 3548354,
+          "data": [],
+          "children": [],
+          "name": "language",
+          "id": 385,
+          "type": "String",
+          "required": false,
+          "desc": "返回文案的语种，支持en_US,zh,zh_TW"
+        },
+        {
+          "treeId": 3548356,
+          "data": [],
+          "children": [],
+          "name": "product_id",
+          "id": 385,
+          "type": "Number",
+          "required": false,
+          "desc": "商品明文id"
+        }
+      ],
+      "name": "param_product_top_publish_request",
+      "id": 385,
+      "type": "Object",
+      "required": false,
+      "desc": "商品规则渲染请求"
+    }
+  ],
+  "output": [
+    {
+      "treeId": 3548361,
+      "data": [],
+      "children": [],
+      "name": "data",
+      "id": 387,
+      "type": "String",
+      "required": false,
+      "desc": "商品发布规则和对应填写数据"
+    },
+    {
+      "treeId": 3548362,
+      "data": [],
+      "children": [],
+      "name": "message",
+      "id": 387,
+      "type": "String",
+      "required": false,
+      "desc": "错误信息，数组形式的字符串，用;分割，支持中英繁，按照传入的语种参数决定"
+    },
+    {
+      "treeId": 3548363,
+      "data": [],
+      "children": [],
+      "name": "msg_code",
+      "id": 387,
+      "type": "String",
+      "required": false,
+      "desc": "返回的错误码，数组形式的字符串，用;分割"
+    },
+    {
+      "treeId": 3548364,
+      "data": [],
+      "children": [],
+      "name": "biz_success",
+      "id": 387,
+      "type": "Boolean",
+      "required": false,
+      "desc": "请求是否成功"
+    },
+    {
+      "treeId": 3548365,
+      "data": [],
+      "children": [],
+      "name": "trace_id",
+      "id": 387,
+      "type": "String",
+      "required": false,
+      "desc": "错误追踪码，请务必打印在日志中，后续排查问题请提交此错误追踪码"
+    }
+  ],
+  "exampleKeys": [
+    "data",
+    "id"
+  ]
+}
