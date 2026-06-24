@@ -66,6 +66,33 @@ function buildPublishRequest(request: NextRequest, body: Record<string, unknown>
   return payload;
 }
 
+function buildSyncApiParams(
+  request: NextRequest,
+  publishRequest: Record<string, string | number>,
+  accessToken: string,
+) {
+  const tokenParam = request.nextUrl.searchParams.get("tokenParam") || "access_token";
+  const tokenValue = accessToken || "DRY_RUN_ACCESS_TOKEN";
+  const params: Record<string, string> = {
+    cat_id: String(publishRequest.cat_id),
+    language: String(publishRequest.language),
+    publish_type: String(publishRequest.publish_type),
+    version: String(publishRequest.version),
+    ...(publishRequest.productId
+      ? { productId: String(publishRequest.productId) }
+      : {}),
+  };
+
+  if (tokenParam === "session" || tokenParam === "both") {
+    params.session = tokenValue;
+  }
+  if (tokenParam === "access_token" || tokenParam === "both") {
+    params.access_token = tokenValue;
+  }
+
+  return params;
+}
+
 function extractSchemaXml(data: unknown): string {
   if (!data || typeof data !== "object") return "";
   const record = data as Record<string, unknown>;
@@ -144,16 +171,7 @@ async function handle(request: NextRequest) {
       access_token: accessToken || "DRY_RUN_ACCESS_TOKEN",
       param_product_top_publish_request: JSON.stringify(publishRequest),
     };
-    const syncApiParams = {
-      session: accessToken || "DRY_RUN_ACCESS_TOKEN",
-      cat_id: String(publishRequest.cat_id),
-      language: String(publishRequest.language),
-      publish_type: String(publishRequest.publish_type),
-      version: String(publishRequest.version),
-      ...(publishRequest.productId
-        ? { productId: String(publishRequest.productId) }
-        : {}),
-    };
+    const syncApiParams = buildSyncApiParams(request, publishRequest, accessToken);
 
     if (isDryRun) {
       if (protocol === "sync") {
