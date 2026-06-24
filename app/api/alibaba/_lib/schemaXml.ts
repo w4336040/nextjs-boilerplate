@@ -122,7 +122,6 @@ export function parseSchemaXml(xml: string) {
       Boolean,
     );
     const value = textContent(ownInner, "value");
-    const hasValueNode = Boolean(value || ownInner.includes("<values>"));
 
     fields.push({
       id,
@@ -134,7 +133,7 @@ export function parseSchemaXml(xml: string) {
         (rule) => rule.name === "requiredRule" && rule.value === "true",
       ),
       value,
-      filled: hasValueNode,
+      filled: Boolean(value || ownInner.includes("<values>")),
       rules,
       options,
     });
@@ -151,9 +150,7 @@ function groupForField(field: SchemaField) {
   const joined = field.path.join(" / ").toLowerCase();
   if (joined.includes("image") || joined.includes("gallery")) return "Images";
   if (joined.includes("price") || joined.includes("moq")) return "Pricing";
-  if (joined.includes("shipping") || joined.includes("logistics")) {
-    return "Logistics";
-  }
+  if (joined.includes("shipping") || joined.includes("logistics")) return "Logistics";
   if (joined.includes("sku") || joined.includes("specification")) return "SKU";
   if (joined.includes("product feature") || field.id.startsWith("p-")) {
     return "Product attributes";
@@ -200,15 +197,39 @@ function hasMatchingFilledValue(required: SchemaField, fields: SchemaField[]) {
   const requiredPath = pathText(required);
   const requiredName = normalized(displayName(required));
   const filledFields = fields.filter(hasMeaningfulValue);
+  const filledPaths = filledFields.map(pathText);
+  const hasFilledPrice = filledPaths.some(
+    (path) =>
+      path.includes("ladderprice") ||
+      path.includes("price setting") ||
+      path.includes("single piece price") ||
+      path.includes("sample"),
+  );
+  const hasFilledDetailMedia = filledPaths.some(
+    (path) =>
+      path.includes("details of the picture") ||
+      path.includes("product images") ||
+      path.includes("image") ||
+      path.includes("gallery"),
+  );
+
+  if (["range_min", "range_max", "unit_type"].includes(required.id)) {
+    return hasFilledPrice;
+  }
+
+  if (
+    required.id === "superText" ||
+    requiredPath.includes("details of the picture")
+  ) {
+    return hasFilledDetailMedia;
+  }
 
   return filledFields.some((field) => {
-    if (field.id !== required.id) return false;
-
     const filledPath = pathText(field);
     const filledName = normalized(displayName(field));
 
+    if (field.id !== required.id) return false;
     if (requiredName && filledName === requiredName) return true;
-
     if (required.id.startsWith("p-")) return true;
 
     if (requiredPath.includes("ladderprice_0")) {
@@ -233,18 +254,6 @@ function hasMatchingFilledValue(required: SchemaField, fields: SchemaField[]) {
 
     if (required.id === "price" && requiredName.includes("sample")) {
       return filledPath.includes("sample") || filledPath.includes("ladderprice");
-    }
-
-    if (["range_min", "range_max", "unit_type"].includes(required.id)) {
-      return filledPath.includes("ladderprice") || filledPath.includes("price setting");
-    }
-
-    if (required.id === "superText") {
-      return (
-        filledPath.includes("regular editor") ||
-        filledPath.includes("details of the picture") ||
-        filledPath.includes("image")
-      );
     }
 
     return !["price", "quantity", "range_min", "range_max", "unit_type"].includes(
@@ -313,22 +322,25 @@ export function buildProductOptimization(fields: SchemaField[]) {
       name: field.name || field.id,
       path: field.path,
       valueLength: field.value.length,
-      suggestion: "补充更完整的英文标题、关键词或卖点文本。",
+      suggestion:
+        "\u8865\u5145\u66f4\u5b8c\u6574\u7684\u82f1\u6587\u6807\u9898\u3001\u5173\u952e\u8bcd\u6216\u5356\u70b9\u6587\u672c\u3002",
     })),
     imageCoverage: {
       fieldCount: imageFields.length,
       filledCount: imageFields.filter((field) => field.filled).length,
-      suggestion: "检查主图、详情图、场景图、细节图是否齐全且清晰。",
+      suggestion:
+        "\u68c0\u67e5\u4e3b\u56fe\u3001\u8be6\u60c5\u56fe\u3001\u573a\u666f\u56fe\u3001\u7ec6\u8282\u56fe\u662f\u5426\u9f50\u5168\u4e14\u6e05\u6670\u3002",
     },
     pricingCoverage: {
       fieldCount: priceFields.length,
       filledCount: priceFields.filter((field) => field.filled).length,
-      suggestion: "检查 MOQ、阶梯价、样品价、币种和价格区间是否完整。",
+      suggestion:
+        "\u68c0\u67e5 MOQ\u3001\u9636\u68af\u4ef7\u3001\u6837\u54c1\u4ef7\u3001\u5e01\u79cd\u548c\u4ef7\u683c\u533a\u95f4\u662f\u5426\u5b8c\u6574\u3002",
     },
     priorities: [
-      "先处理 missingRequired 中的真实必填缺失，避免商品编辑或发布失败。",
-      "优先优化 Product name、Product keywords、Product images、MOQ、Single Piece price。",
-      "再根据商品质量分接口返回的 problem_map 定向修复低质量项。",
+      "\u5148\u5904\u7406 missingRequired \u4e2d\u7684\u771f\u5b9e\u5fc5\u586b\u7f3a\u5931\uff0c\u907f\u514d\u5546\u54c1\u7f16\u8f91\u6216\u53d1\u5e03\u5931\u8d25\u3002",
+      "\u4f18\u5148\u4f18\u5316 Product name\u3001Product keywords\u3001Product images\u3001MOQ\u3001Single Piece price\u3002",
+      "\u518d\u6839\u636e\u5546\u54c1\u8d28\u91cf\u5206\u63a5\u53e3\u8fd4\u56de\u7684 problem_map \u5b9a\u5411\u4fee\u590d\u4f4e\u8d28\u91cf\u9879\u3002",
     ],
   };
 }
