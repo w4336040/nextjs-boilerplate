@@ -18,6 +18,7 @@ export function resolveTopGatewayUrl(modeOrUrl = "") {
   if (value === "gw") return "https://gw.api.taobao.com/router/rest";
   if (value === "gw-http") return "http://gw.api.taobao.com/router/rest";
   if (value === "eco") return "https://eco.taobao.com/router/rest";
+  if (value === "api") return "https://api.taobao.com/router/rest";
   if (value.startsWith("https://") || value.startsWith("http://")) return value;
   return topGatewayUrl();
 }
@@ -116,4 +117,23 @@ export async function callTopApi(options: {
       hasSession: Boolean(params.session),
     },
   };
+}
+
+export function describeFetchError(error: unknown) {
+  if (!(error instanceof Error)) return { message: String(error) };
+  const details: Record<string, unknown> = {
+    name: error.name,
+    message: error.message,
+  };
+  const cause = (error as Error & { cause?: unknown }).cause;
+  if (cause instanceof Error) {
+    details.cause = {
+      name: cause.name,
+      message: cause.message,
+      code: (cause as Error & { code?: string }).code,
+    };
+  } else if (cause) {
+    details.cause = String(cause);
+  }
+  return details;
 }

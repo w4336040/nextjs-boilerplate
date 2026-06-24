@@ -6,6 +6,7 @@ import {
 import {
   buildTopParams,
   callTopApi,
+  describeFetchError,
   resolveTopGatewayUrl,
 } from "../../../_lib/top";
 
@@ -145,11 +146,26 @@ async function handle(request: NextRequest) {
       });
     }
 
-    const result = await callTopApi({
-      method: API_NAME,
-      apiParams,
-      gatewayUrl: gateway,
-    });
+    let result: Awaited<ReturnType<typeof callTopApi>>;
+    try {
+      result = await callTopApi({
+        method: API_NAME,
+        apiParams,
+        gatewayUrl: gateway,
+      });
+    } catch (fetchError) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: "Alibaba TOP gateway fetch failed.",
+          gateway,
+          hint:
+            "Try gateway=api or gateway=eco. If only gw fails on Vercel, keep ALIBABA_TOP_GATEWAY_URL on the working gateway.",
+          details: describeFetchError(fetchError),
+        },
+        { status: 502 },
+      );
+    }
     const xml = extractSchemaXml(result.data);
 
     return NextResponse.json(
