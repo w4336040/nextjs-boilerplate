@@ -1,5 +1,6 @@
 import { createCipheriv, createHash, createHmac, randomBytes } from "crypto";
 import { NextRequest, NextResponse } from "next/server";
+import { writeStoredToken } from "../../../_lib/tokenStore";
 
 export const runtime = "nodejs";
 
@@ -171,6 +172,8 @@ export async function GET(request: NextRequest) {
           ok: true,
           message: "Alibaba token received and stored in an encrypted HttpOnly cookie.",
         });
+
+    await writeStoredToken(tokenResult.data as Record<string, unknown>);
 
     response.cookies.set("alibaba_token", encryptForCookie(tokenResult.data), {
       httpOnly: true,
