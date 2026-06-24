@@ -1,6 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 
-import { getAccessTokenFromStorageOrRequest, redact } from "../../_lib/iop";
+import {
+  buildIopSyncParams,
+  callIopSyncApi,
+  getAccessTokenFromStorageOrRequest,
+  redact,
+  syncGatewayUrl,
+} from "../../_lib/iop";
 import {
   buildTopParams,
   callTopApi,
@@ -83,6 +89,7 @@ function buildTopContext(request: NextRequest) {
 export async function GET(request: NextRequest) {
   try {
     const isDryRun = request.nextUrl.searchParams.get("dryRun") === "1";
+    const protocol = request.nextUrl.searchParams.get("protocol") || "sync";
     const gateway = resolveTopGatewayUrl(
       request.nextUrl.searchParams.get("gateway") || "",
     );
@@ -99,24 +106,60 @@ export async function GET(request: NextRequest) {
 
     const topContext = buildTopContext(request);
     const productReportOperation = buildReportOperation(request);
-    const apiParams = {
+    const syncApiParams = {
+      access_token: session || "DRY_RUN_ACCESS_TOKEN",
+      top_context: JSON.stringify(topContext),
+      product_report_operation: JSON.stringify(productReportOperation),
+    };
+    const topApiParams = {
       session: session || "DRY_RUN_SESSION",
       top_context: JSON.stringify(topContext),
       product_report_operation: JSON.stringify(productReportOperation),
     };
 
     if (isDryRun) {
-      const signed = buildTopParams(API_NAME, apiParams);
+      const signed =
+        protocol === "top"
+          ? buildTopParams(API_NAME, topApiParams)
+          : buildIopSyncParams(API_NAME, syncApiParams);
       return NextResponse.json({
         ok: true,
-        gateway,
+        gateway: protocol === "top" ? gateway : syncGatewayUrl(),
         method: API_NAME,
-        protocol: "top",
+        protocol: protocol === "top" ? "top" : "iop-sync",
         topContext,
         productReportOperation,
         redactedPayload: redact(signed),
         note:
-          "Read-only SCBP product advertising report. Use real call without dryRun after permission is confirmed.",
+          protocol === "top"
+            ? "TOP mode is kept for comparison. Your current ICBU app key may not exist on Taobao TOP gateways."
+            : "Default sync mode matches the current ICBU open platform token flow.",
+      });
+    }
+
+    if (protocol !== "top") {
+      const httpMethod =
+        request.nextUrl.searchParams.get("httpMethod") === "POST"
+          ? "POST"
+          : "GET";
+      const result = await callIopSyncApi({
+        apiName: API_NAME,
+        apiParams: syncApiParams,
+        httpMethod,
+      });
+
+      return NextResponse.json({
+        ...result,
+        data: redact(result.data),
+        reportRequest: {
+          protocol: "iop-sync",
+          topContext,
+          productReportOperation,
+        },
+        hint:
+          result.ok && !(result.data as Record<string, unknown>)?.error_response
+            ? "If data is empty, confirm SCBP permission and date range."
+            : "If this reports an invalid method or permission error, confirm that SCBP product report is opened for this ICBU app.",
       });
     }
 
@@ -124,7 +167,7 @@ export async function GET(request: NextRequest) {
     try {
       result = await callTopApi({
         method: API_NAME,
-        apiParams,
+        apiParams: topApiParams,
         gatewayUrl: gateway,
       });
     } catch (fetchError) {
@@ -143,6 +186,7 @@ export async function GET(request: NextRequest) {
       ...result,
       data: redact(result.data),
       reportRequest: {
+        protocol: "top",
         topContext,
         productReportOperation,
       },

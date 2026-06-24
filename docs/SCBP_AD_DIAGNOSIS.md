@@ -22,6 +22,29 @@ Use this to call the SCBP product report API.
 https://api.viecart.com/api/alibaba/ad/product-report?days=7&page_size=20
 ```
 
+Default protocol:
+
+```text
+protocol=sync
+```
+
+This uses the current Alibaba.com International Station open-platform flow:
+
+```text
+https://open-api.alibaba.com/sync
+```
+
+TOP mode is kept only for comparison:
+
+```text
+protocol=top&gateway=eco
+protocol=top&gateway=api
+protocol=top&gateway=gw
+```
+
+If TOP mode returns `Invalid app Key`, it means the Taobao TOP gateway does not
+recognize the current ICBU app key. Use `protocol=sync` first.
+
 Optional parameters:
 
 ```text
@@ -81,6 +104,8 @@ Try:
 gateway=gw
 gateway=eco
 gateway=api
+protocol=sync
+protocol=top
 ```
 
 Then paste the JSON response here for debugging.
