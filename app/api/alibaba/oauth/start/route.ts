@@ -26,6 +26,13 @@ export async function GET(request: NextRequest) {
       process.env.ALIBABA_AUTH_CLIENT_ID_PARAM || "client_id",
       requireEnv("ALIBABA_APP_KEY"),
     );
+    for (const alias of (process.env.ALIBABA_AUTH_APP_KEY_ALIASES ||
+      "client_id,appkey,app_key").split(",")) {
+      const key = alias.trim();
+      if (key) {
+        authUrl.searchParams.set(key, requireEnv("ALIBABA_APP_KEY"));
+      }
+    }
     authUrl.searchParams.set(
       process.env.ALIBABA_AUTH_REDIRECT_URI_PARAM || "redirect_uri",
       requireEnv("ALIBABA_REDIRECT_URI"),
@@ -65,4 +72,3 @@ export async function GET(request: NextRequest) {
     );
   }
 }
-
