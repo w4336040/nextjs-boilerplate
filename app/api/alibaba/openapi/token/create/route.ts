@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import crypto from "crypto";
 
 export const runtime = "nodejs";
 
@@ -62,6 +63,58 @@ function buildPayload(request: NextRequest, body: Record<string, unknown>) {
   return payload;
 }
 
+function timestampGmt8() {
+  const date = new Date(Date.now() + 8 * 60 * 60 * 1000);
+  const pad = (value: number) => String(value).padStart(2, "0");
+  return [
+    date.getUTCFullYear(),
+    "-",
+    pad(date.getUTCMonth() + 1),
+    "-",
+    pad(date.getUTCDate()),
+    " ",
+    pad(date.getUTCHours()),
+    ":",
+    pad(date.getUTCMinutes()),
+    ":",
+    pad(date.getUTCSeconds()),
+  ].join("");
+}
+
+function signTopRequest(params: TokenPayload, secret: string) {
+  const sortedKeys = Object.keys(params).sort();
+  const assembled = sortedKeys
+    .filter((key) => key !== "sign" && params[key] !== "")
+    .map((key) => `${key}${params[key]}`)
+    .join("");
+
+  return crypto
+    .createHash("md5")
+    .update(`${secret}${assembled}${secret}`, "utf8")
+    .digest("hex")
+    .toUpperCase();
+}
+
+function buildTopAuthTokenPayload(request: NextRequest, body: Record<string, unknown>) {
+  const code = String(body.code || request.nextUrl.searchParams.get("code") || "")
+    .trim();
+  const params: TokenPayload = {
+    method: "taobao.top.auth.token.create",
+    app_key: requireEnv("ALIBABA_APP_KEY"),
+    timestamp: timestampGmt8(),
+    format: "json",
+    v: "2.0",
+    sign_method: "md5",
+  };
+
+  if (code) {
+    params.code = code;
+  }
+
+  params.sign = signTopRequest(params, requireEnv("ALIBABA_APP_SECRET"));
+  return params;
+}
+
 async function parseBody(request: NextRequest) {
   const contentType = request.headers.get("content-type") || "";
   if (!contentType.includes("application/json")) return {};
@@ -74,6 +127,29 @@ async function parseBody(request: NextRequest) {
 
 async function callTokenEndpoint(payload: TokenPayload, format: string) {
   const tokenUrl = requireEnv("ALIBABA_TOKEN_URL");
+  if (format === "top") {
+    const response = await fetch(tokenUrl, {
+      method: "POST",
+      headers: { "content-type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams(payload).toString(),
+      cache: "no-store",
+    });
+    const text = await response.text();
+    let data: unknown;
+    try {
+      data = JSON.parse(text);
+    } catch {
+      data = { raw: text };
+    }
+
+    return {
+      ok: response.ok,
+      status: response.status,
+      statusText: response.statusText,
+      data: redact(data),
+    };
+  }
+
   const headers =
     format === "form"
       ? { "content-type": "application/x-www-form-urlencoded" }
@@ -116,11 +192,14 @@ export async function POST(request: NextRequest) {
 async function handle(request: NextRequest) {
   try {
     const body = await parseBody(request);
-    const payload = buildPayload(request, body);
     const format =
       request.nextUrl.searchParams.get("format") ||
       process.env.ALIBABA_TOKEN_REQUEST_FORMAT ||
-      "json";
+      "top";
+    const payload =
+      format === "top"
+        ? buildTopAuthTokenPayload(request, body)
+        : buildPayload(request, body);
 
     if (request.nextUrl.searchParams.get("dryRun") === "1") {
       return NextResponse.json({
@@ -130,8 +209,25 @@ async function handle(request: NextRequest) {
         payloadKeys: Object.keys(payload),
         redactedPayload: redact(payload),
         note:
-          "If this dry run looks right, call the same URL without dryRun=1 to send a server-side token request.",
+          format === "top"
+            ? "TOP token creation requires an authorization code. Call /api/alibaba/openapi/token/create?code=AUTHORIZATION_CODE after you obtain code."
+            : "If this dry run looks right, call the same URL without dryRun=1 to send a server-side token request.",
       });
+    }
+
+    if (format === "top" && !payload.code) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error:
+            "Missing authorization code. TOP token creation requires code from Alibaba authorization callback.",
+          tokenUrl: process.env.ALIBABA_TOKEN_URL,
+          requiredCall:
+            "/api/alibaba/openapi/token/create?code=AUTHORIZATION_CODE",
+          dryRun: "/api/alibaba/openapi/token/create?dryRun=1",
+        },
+        { status: 400 },
+      );
     }
 
     const result = await callTokenEndpoint(payload, format);
@@ -143,4 +239,3 @@ async function handle(request: NextRequest) {
     );
   }
 }
-

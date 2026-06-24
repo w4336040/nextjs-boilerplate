@@ -33,11 +33,10 @@ export async function GET() {
     tokenUrl: process.env.ALIBABA_TOKEN_URL || null,
     gatewayUrl:
       process.env.ALIBABA_OPENAPI_GATEWAY_URL || "https://openapi.alibaba.com",
-    tokenRequestFormat: process.env.ALIBABA_TOKEN_REQUEST_FORMAT || "json",
+    tokenRequestFormat: process.env.ALIBABA_TOKEN_REQUEST_FORMAT || "top",
     nextTests: [
       "/api/alibaba/openapi/token/create?dryRun=1",
-      "/api/alibaba/openapi/token/create",
+      "/api/alibaba/openapi/token/create?code=AUTHORIZATION_CODE",
     ],
   });
 }
-
