@@ -1,5 +1,6 @@
 import { createDecipheriv, createHash } from "crypto";
 import { NextRequest, NextResponse } from "next/server";
+import { readStoredToken } from "../../_lib/tokenStore";
 
 export const runtime = "nodejs";
 
@@ -39,17 +40,17 @@ function mask(value: unknown) {
 }
 
 export async function GET(request: NextRequest) {
-  const cookie = request.cookies.get("alibaba_token")?.value;
-  if (!cookie) {
-    return NextResponse.json({
-      ok: false,
-      hasToken: false,
-      startUrl: "/api/alibaba/oauth/start",
-    });
-  }
-
   try {
-    const data = decryptCookie(cookie);
+    const stored = await readStoredToken();
+    const cookie = request.cookies.get("alibaba_token")?.value;
+    const data = stored || (cookie ? decryptCookie(cookie) : null);
+    if (!data) {
+      return NextResponse.json({
+        ok: false,
+        hasToken: false,
+        startUrl: "/api/alibaba/oauth/start",
+      });
+    }
     return NextResponse.json({
       ok: true,
       hasToken: true,
@@ -68,4 +69,3 @@ export async function GET(request: NextRequest) {
     );
   }
 }
-
