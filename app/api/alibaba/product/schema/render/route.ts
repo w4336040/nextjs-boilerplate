@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import {
   buildIopSyncParams,
   callIopSyncApi,
-  getAccessTokenFromRequest,
+  getAccessTokenFromStorageOrRequest,
   redact,
   syncGatewayUrl,
 } from "../../../_lib/iop";
@@ -41,7 +41,7 @@ function extractXml(data: unknown): string {
 export async function GET(request: NextRequest) {
   try {
     const isDryRun = request.nextUrl.searchParams.get("dryRun") === "1";
-    const accessToken = getAccessTokenFromRequest(request);
+    const accessToken = await getAccessTokenFromStorageOrRequest(request);
     if (!accessToken && !isDryRun) {
       return NextResponse.json(
         {
