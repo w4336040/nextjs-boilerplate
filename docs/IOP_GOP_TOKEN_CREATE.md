@@ -26,7 +26,7 @@ Business parameters:
 The current debug implementation uses:
 
 ```text
-ALIBABA_IOP_GATEWAY_URL=https://openapi-api.alibaba.com/rest
+ALIBABA_IOP_GATEWAY_URL=https://open-api.alibaba.com/rest
 ALIBABA_IOP_SIGN_METHOD=sha256
 ```
 
@@ -41,4 +41,3 @@ Real request when a code is available:
 ```text
 https://api.viecart.com/api/alibaba/iop/token/create?code=YOUR_CODE
 ```
-

@@ -1,11 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
-  buildIopParams,
-  callIopApi,
   getAccessTokenFromRequest,
-  iopGatewayBase,
   redact,
 } from "../../../_lib/iop";
+import { buildTopParams, callTopApi, topGatewayUrl } from "../../../_lib/top";
 
 export const runtime = "nodejs";
 
@@ -123,29 +121,26 @@ async function handle(request: NextRequest) {
 
     const publishRequest = buildPublishRequest(request, body);
     const apiParams = {
-      access_token: accessToken || "DRY_RUN_ACCESS_TOKEN",
+      session: accessToken || "DRY_RUN_ACCESS_TOKEN",
       param_product_top_publish_request: JSON.stringify(publishRequest),
     };
-    const transport =
-      request.nextUrl.searchParams.get("transport") === "form" ? "form" : "json";
 
     if (isDryRun) {
-      const signed = buildIopParams(API_NAME, apiParams);
+      const signed = buildTopParams(API_NAME, apiParams);
       return NextResponse.json({
         ok: true,
-        gateway: iopGatewayBase(),
-        url: `${iopGatewayBase()}/${API_NAME}`,
-        apiName: API_NAME,
-        transport,
+        gateway: topGatewayUrl(),
+        url: topGatewayUrl(),
+        method: API_NAME,
+        protocol: "top",
         publishRequest,
         redactedPayload: redact(signed),
       });
     }
 
-    const result = await callIopApi({
-      apiName: API_NAME,
+    const result = await callTopApi({
+      method: API_NAME,
       apiParams,
-      transport,
     });
     const xml = extractSchemaXml(result.data);
 

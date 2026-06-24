@@ -46,8 +46,8 @@ Required:
 ```env
 ALIBABA_APP_KEY=your_app_key
 ALIBABA_APP_SECRET=your_app_secret
-ALIBABA_TOKEN_URL=https://openapi.alibaba.com/auth/token/create
-ALIBABA_TOKEN_REQUEST_FORMAT=json
+ALIBABA_TOKEN_URL=https://open-api.alibaba.com/rest/auth/token/create
+ALIBABA_TOKEN_REQUEST_FORMAT=iop
 ALIBABA_OPENAPI_GATEWAY_URL=https://openapi.alibaba.com
 ```
 
@@ -62,4 +62,3 @@ To finish the production integration, confirm these from the official docs:
 - Whether the token request must be JSON or form encoded.
 - Whether OpenAPI calls require HMAC/RSA signing in addition to token.
 - Exact gateway URL for business methods.
-
