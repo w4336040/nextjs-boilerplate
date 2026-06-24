@@ -75,6 +75,20 @@ export function signIopRequest(apiName: string, params: IopParams) {
     .toUpperCase();
 }
 
+export function signIopMigrationRequest(params: IopParams) {
+  const assembled = Object.keys(params)
+    .sort()
+    .filter((key) => key !== "sign" && params[key] !== "")
+    .map((key) => `${key}${params[key]}`)
+    .join("");
+
+  return crypto
+    .createHmac("sha256", requireEnv("ALIBABA_APP_SECRET"))
+    .update(assembled, "utf8")
+    .digest("hex")
+    .toUpperCase();
+}
+
 export function buildIopParams(apiName: string, apiParams: IopParams) {
   const params: IopParams = {
     app_key: requireEnv("ALIBABA_APP_KEY"),
@@ -84,6 +98,71 @@ export function buildIopParams(apiName: string, apiParams: IopParams) {
   };
   params.sign = signIopRequest(apiName, params);
   return params;
+}
+
+export function syncGatewayUrl() {
+  return (
+    process.env.ALIBABA_SYNC_GATEWAY_URL ||
+    "https://open-api.alibaba.com/sync"
+  );
+}
+
+export function buildIopSyncParams(apiName: string, apiParams: IopParams) {
+  const params: IopParams = {
+    method: apiName,
+    app_key: requireEnv("ALIBABA_APP_KEY"),
+    timestamp: String(Date.now()),
+    sign_method: process.env.ALIBABA_IOP_SIGN_METHOD || "sha256",
+    simplify: "true",
+    format: "json",
+    ...apiParams,
+  };
+  params.sign = signIopMigrationRequest(params);
+  return params;
+}
+
+export async function callIopSyncApi(options: {
+  apiName: string;
+  apiParams: IopParams;
+  httpMethod?: "GET" | "POST";
+}) {
+  const params = buildIopSyncParams(options.apiName, options.apiParams);
+  const url = syncGatewayUrl();
+  const httpMethod = options.httpMethod || "GET";
+  const query = new URLSearchParams(params).toString();
+  const response = await fetch(httpMethod === "GET" ? `${url}?${query}` : url, {
+    method: httpMethod,
+    headers: {
+      "accept-encoding": "gzip",
+      "content-type": "application/x-www-form-urlencoded;charset=UTF-8",
+    },
+    body: httpMethod === "POST" ? query : undefined,
+    cache: "no-store",
+  });
+
+  const text = await response.text();
+  let data: unknown;
+  try {
+    data = JSON.parse(text);
+  } catch {
+    data = { raw: text };
+  }
+
+  return {
+    ok: response.ok,
+    status: response.status,
+    statusText: response.statusText,
+    url,
+    data,
+    sent: {
+      apiName: options.apiName,
+      protocol: "iop-sync",
+      httpMethod,
+      payloadKeys: Object.keys(params),
+      hasSession: Boolean(params.session),
+      hasAccessToken: Boolean(params.access_token),
+    },
+  };
 }
 
 export function resolveIopApiUrl(apiName: string, mode = "dot-path") {

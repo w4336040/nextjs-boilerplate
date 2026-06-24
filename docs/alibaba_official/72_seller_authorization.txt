@@ -1,0 +1,83 @@
+# 卖家授权介绍 
+
+一、简介
+如果您的应用和国际站开放平台对接时需要获取用户隐私数据（如商品、订单等），为保证用户数据的安全与隐私，您的应用需要取得用户的授权，即获取访问用户数据的授权令牌 Access Token （即原来的SessionKey）。这种情况下，您的应用需要引导用户完成使用国际站账号“登录授权”的流程。该流程采用国际通用的OAuth2.0标准协议作为用户身份验证与授权协议。
+目前国际站平台支持使用code获取token的方法，具体操作如下。
+
+二、服务环境
+Environment
+Service address
+oversea environment 
+https://open.alibaba.com/oauth/authorize
+
+三、授权步骤
+
+1. 拼接授权URL
+拼接用户授权需访问url ，示例及参数说明如下：
+https://open-api.alibaba.com/oauth/authorize?response_type=code&force_auth=true&redirect_uri=${app call back url}&client_id=${appkey}
+注意：请使用自己应用的AppKey和回调URL进行替换“client_id”和“redirect_uri”。
+参数说明：
+
+2. 引导用户登陆授权
+引导用户通过浏览器访问以上授权url，将弹出如下登录页面。用户输入账号、密码点“授权”按钮，即可进入授权页面。
+
+3.获取code
+上图页面，若用户点“授权”按钮后，TOP会将授权码code 返回到了回调地址上，应用可以获取并使用该code去换取access_token（注意code的有效期很短，尽量使用程序（而非手工复制）获取到代码后立刻换取access_token，否则code很快失效）；
+
+4.换取access_token
+4.1 通过sdk获取 tocken，以下样例为使用SDK时所需传入参数
+调用: /auth/token/create 获取access_token。
+API 文档：
+https://open.alibaba.com/doc/api.htm?spm=a2o9m.11193531.0.0.4c9c4bd6mLyMmC#/api?cid=2&path=/auth/token/create&methodType=GET/POST
+入参示例：
+PlainBashC++C#CSSDiffHTML/XMLJavaJavascriptMarkdownPHPPythonRubySQL String url = "https://open-api.alibaba.com/rest/auth/token/create?";
+ String appkey = "34248607";
+ String appSecret = "4456567";
+ String signMethod = "sha256";
+ String apiName = "/auth/token/create";
+ String code = "3_34248607_aWiK1ViYaaGYoAqPhA2Zr3TH3";
+ IopClient client = new IopClientImpl(url, appkey, appSecret);
+ IopRequest request = new IopRequest();
+ request.setApiName(apiName);
+ request.addApiParameter("code", code);
+ IopResponse response = client.execute(request, Protocol.GOP);
+ System.out.println(response.getGopResponseBody());
+
+4.2通过HTTP的方式获取tocken 
+请求url全链接：
+https://open-api.alibaba.com/rest/auth/token/create?/rest/auth/token/create&app_key=500060&partner_id=iop-sdk-java-20181207&sign_method=sha256&sign=0CFC8089502503930CEA617C8485BB35CA2E9EF35331F818EB8C84189AC78C39&timestamp=1731567783358
+注意：在header中添加 Accept-Encoding gzip
+
+5.保存access_token
+access_token会周期（expire_in）结束后过期，请在过期之前妥善保存access_token。
+
+6.换取access_token返回示例
+从原开放平台迁移的ISV特别注意: 原开放平台中的user_id 对应此处返回值中的havana_id
+PlainBashC++C#CSSDiffHTML/XMLJavaJavascriptMarkdownPHPPythonRubySQL{
+ "access_token": "50000000308cMOJlbruD10392482q9ICPaRUBh3izEmpguOg8EfthLUviFwz0lB",
+ "country": "CN",
+ "refresh_token": "50001001308t0UUrueHP18393743ZuPf8GFUftwwiHiJnyDuUmh0mPRcPOEV5cT",
+ "account_platform": "seller_center",
+ "refresh_expires_in": 25920000,
+ "expires_in": 25920000,
+ "account": "evan.yinjun002111@gmail.com",
+ "code": "0",
+ "request_id": "213c50c417262055301715003",
+ "_trace_id_": "0bbb3da517262055301683993ed159"
+}
+
+返回值参数说明：
+
+注意：
+自研isv允许商家授权token到期时间计算方式为：调用接口时间+token有效时长，每次生成的新token到期时间会改变。
+商用isv服务市场授权token到期时间计算方式为：商家购买服务时间+token有效时长，每次生成的新token到期时间不会改变。
+另外，生成的新token和老token都会指向同一份授权，在老token没有过期的情况下，仍可以使用。
+
+四、激活授权步骤
+注意：服务市场授权isv请忽略该步骤，不支持调用该接口。
+1. 使用 “/auth/token/refresh” 重新激活access token
+使用该API所获得的返回值结构与获取access_token方法返回值相同。你将获得新的“access_token”和“refresh_token”，请保存好“refresh_token”。注意：access_token的有效期将重置，但是refresh_token有效期不会重置。在refresh_token过期之后，商家需要授权生成新的access_token和refresh_token。
+注意：
+1）在access_token过期前商家无需重复授权。
+2）只有当refresh_token的过期时间“refresh_expires_in”大于0时才可以用于重新激活access_token。
+3）如果access_token需要被重新激活，建议在access_token过期前30分钟进行该操作。

@@ -1,0 +1,81 @@
+# 签名算法 
+
+为了防止API调用过程中被黑客恶意篡改，调用任何一个API都需要携带签名，TOP服务端会根据请求参数，对签名进行验证，签名不合法的请求将会被拒绝。签名大体过程如下（注意：调用原开放平台迁移接口和新平台注册接口时，在生成签名过程中仅对方法名称处理存在区别，请根据调用方法选择响应处理方式，其他过程一致。）：
+
+对所有API请求参数（包括公共参数和业务参数，但除去sign参数和byte[]类型的参数），根据参数名称的ASCII码表的顺序排序（如果调用方法为原平台迁移方法，方法名需作为请求参数参与排序）。如： 
+排序前：foo:1, bar:2, foo_bar:3, foobar:4
+排序后：bar:2, foo:1, foo_bar:3, foobar:4
+
+将排序好的参数名和参数值拼装在一起，根据上面的示例得到的结果为：
+bar2foo1foo_bar3foobar4
+（如果调用方法为新平台注册方法，请将API名称放置在拼接字符串开头，例如：若API名称为“testAPI”）
+testAPIbar2foo1foo_bar3foobar4 
+把拼装好的字符串采用utf-8编码，使用"HMAC_SHA256"签名算法对编码后的字节流进行摘要。如：
+hmac_sha256(testAPIbar2foo1foo_bar3foobar4)
+将摘要得到的字节流结果使用十六进制表示，如：
+hex(“helloworld”.getBytes(“utf-8”)) = “68656C6C6F776F726C64”
+JAVA签名示例代码
+public static final String CHARSET_UTF8 = "UTF-8";
+public static final String SIGN_METHOD_SHA256 = "sha256";
+public static final String SIGN_METHOD_HMAC_SHA256 = "HmacSHA256";
+
+PlainBashC++C#CSSDiffHTML/XMLJavaJavascriptMarkdownPHPPythonRubySQLpublic static String signApiRequest(Map<String, String> params, String appSecret, String signMethod, String apiName) throws IOException {
+ // 如果是调用原平台迁移方法，请将方法名作为请求参数放入params中参与排序
+ // params.put("method",apiName);
+
+ // 第一步：检查参数是否已经排序
+ String[] keys = params.keySet().toArray(new String[0]);
+ Arrays.sort(keys);
+
+ // 第二步：把所有参数名和参数值串在一起
+ StringBuilder query = new StringBuilder();
+
+ // 如果是调用新平台注册方法，请执行第三步，直接拼接方法名
+ // 第三步：将API名拼接在字符串开头
+ query.append(apiName);
+
+ for (String key : keys) {
+ String value = params.get(key);
+ if (areNotEmpty(key, value)) {
+ query.append(key).append(value);
+ }
+ }
+
+ // 第四步：使用加密算法
+ byte[] bytes = null;
+
+ if (signMethod.equals(SIGN_METHOD_SHA256)) {
+ bytes = encryptHMACSHA256(query.toString(), appSecret);
+ }
+
+ // 第五步：把二进制转化为大写的十六进制(正确签名应该为32大写字符串，此方法需要时使用)
+ return byte2hex(bytes);
+}
+
+private static byte[] encryptHMACSHA256(String data, String secret) throws IOException {
+ byte[] bytes = null;
+ try {
+ SecretKey secretKey = new SecretKeySpec(secret.getBytes(CHARSET_UTF8), SIGN_METHOD_HMAC_SHA256);
+ Mac mac = Mac.getInstance(secretKey.getAlgorithm());
+ mac.init(secretKey);
+ bytes = mac.doFinal(data.getBytes(CHARSET_UTF8));
+ } catch (GeneralSecurityException gse) {
+ throw new IOException(gse.toString());
+ }
+ return bytes;
+}
+
+/**
+ * Transfer binary array to HEX string.
+ */
+public static String byte2hex(byte[] bytes) {
+ StringBuilder sign = new StringBuilder();
+ for (int i = 0; i < bytes.length; i++) {
+ String hex = Integer.toHexString(bytes[i] & 0xFF);
+ if (hex.length() == 1) {
+ sign.append("0");
+ }
+ sign.append(hex.toUpperCase());
+ }
+ return sign.toString();
+}

@@ -1,0 +1,66 @@
+# 请求参数
+
+公共参数
+调用任何一个API都必须传入的参数，目前支持的公共参数有： 
+参数名称
+参数类型
+是否必须
+参数描述
+app_key
+String
+是
+国际站开放平台分配给应用的AppKey。进入开放平台应用控制台可查看AppKey、AppSecret
+method
+String
+是
+调用的api
+session 
+String
+是
+用户授权token。当此API文档的标签上注明：“需要
+授权”，则此参数必传；“不需要授权”，则此参数
+不需要传；“可选授权”则此参数为可选。
+sign_method
+String
+是
+用以生成签名的签名算法
+format
+String
+否
+返回值格式方式（json,xml）
+sign 
+String
+是
+用以请求验证的加密签名
+timestamp
+String
+是
+时间戳，使用UTC或数字格式，如“2017-11-11T12:00:00Z或者1517886554000”。注意时
+间戳与UTC时间最大误差不得超过7200秒。
+
+业务参数
+API调用除了必须包含公共参数外，如果API本身有业务级的参数也必须传入，每个API的业务级参数请考API文档说明。
+如试例中的alibaba.icbu.product.list 传入了必填参数language +page_size：
+
+常见接口调用报错自查：
+错误返回：
+{"error_response":{"type":"ISP","code":"ServiceUnavailable","msg":"The request has failed due to a temporary failure of RPC server","request_id":"****************"}}
+错误原因说明：
+由于某些接口配置不再支持非精简格式数据返回，会导致接口返回数据处理异常从而报上述错误。
+自查方法：
+可前往应用控制台-API访问日志功能：https://open.alibaba.com/app/index.htm#/api/accessLog?id=14785517&appkey=34248607&_k=hadvs8 （appKey换成自己的）
+根据request_id查询请求详情，如果发现请求参数中simplify=false，可通过将请求参数simplify设置为true进行重试，并观察相关结果。（如果排查发现请求参数simplify=true仍报上述错误，可前往工单界面提交接口所属相关技术域工单进行咨询。）
+传参示例：
+http拼接请求传参参考：HTTP请求示例
+SDK请求传参参考：
+PlainBashC++C#CSSDiffHTML/XMLJavaJavascriptMarkdownPHPPythonRubySQL
+
+ public static void testApi(String url, String appkey, String appSecret, String accessToken) throws ApiException {
+ IopClient client = new IopClientImpl(url, appkey, appSecret);
+ IopRequest request = new IopRequest();
+ request.setApiName("alibaba.icbu.product.list");
+ request.addApiParameter("page_size", "10");
+ request.addApiParameter("language", "ENGLISH");
+ IopResponse response = client.execute(request, accessToken, Protocol.TOP);
+ System.out.println(response.getGopResponseBody());
+ }

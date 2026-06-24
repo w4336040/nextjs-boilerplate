@@ -1,0 +1,16 @@
+# API调用步骤
+
+国际站开放平台的API是基于HTTP协议来调用的，开发者（ISV）可以直接使用国际站开放平台提供的官方SDK（支持多种语言，包含了请求的封装，签名加密，响应解释，性能优化等）来调用，也可以根据AE的协议来封装HTTP请求进行调用，以下主要是针对自行封装HTTP请求进行API调用的原理进行详细解说。
+
+调用流程
+根据国际站的协议：
+1.填充参数 
+2.生成签名
+3.拼装HTTP请求
+4.发起HTTP请求
+5.得到HTTP响应
+6.解释json/xml结果
+
+API调用入口
+API格式: https://open-api.alibaba.com/sync?method={api_path}&{query}新开放平台注册的API: https://open.alibaba.com/doc/api.htm说明: 
+具体某个API应使用哪一种方式调用，请参考具体调用的接口API文档页面中Java示例代码的协议说明：标明Protocal.TOP{api_path}为具体的api路径，{query}为参数.调用例子见: HTTP请求示例 https://open-api.alibaba.com/sync?app_key=34248607&method=alibaba.icbu.product.list&session=50000001219qGV4AgvCHpcSrEBGFRCp18441f79uzEkdQjVhSVEgajRqgt7b9bK&sign_method=SHA256&format=json&sign=D5C578D3D9573F61FB04935F7B0E8AEB&language=ENGLISH&page_size=10&timestamp=1726279603888

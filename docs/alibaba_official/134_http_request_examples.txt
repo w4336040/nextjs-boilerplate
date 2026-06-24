@@ -1,0 +1,41 @@
+# HTTP请求示例
+
+一、原平台迁移API
+以alibaba.icbu.product.schema.get（获取商品发布字段和规则）为例，具体步骤如下：
+1.设置参数值
+公共参数：
+app_key = “12345678”access_token = “test”timestamp = “1517820392000”sign_method = “sha256”simplify = “true”业务参数：
+cat_id = "333"language = "en_US"method = "alibaba.icbu.product.schema.get"2.按ASCII顺序排序
+access_token = "test"app_key = "12345678"cat_id = "333"language = "en_US"method = "alibaba.icbu.product.schema.get"sign_method = "sha256"simplify = "true"timestamp = "1517820392000"3.拼接参数名与参数值
+PlainBashC++C#CSSDiffHTML/XMLJavaJavascriptMarkdownPHPPythonRubySQLaccess_tokentestapp_key12345678cat_id333languageen_USmethodalibaba.icbu.product.schema.getsign_methodsha256simplifytruetimestamp1517820392000
+
+4.生成签名
+假设app的secret为helloworld，则签名结果为：
+PlainBashC++C#CSSDiffHTML/XMLJavaJavascriptMarkdownPHPPythonRubySQLhex(sha256(access_tokentestapp_key12345678cat_id333languageen_USmethodalibaba.icbu.product.schema.getsign_methodsha256simplifytruetimestamp1517820392000))=D72D433988FC4727F39E123E3396F557C3E53DEC392C1992C77812579DAA7CD2
+
+5.组装HTTP请求
+将所有参数名和参数值采用utf-8进行URL编码（参数顺序可随意，但必须要包括签名参数），然后通过GET或POST（含byte[]类型参数）发起请求，拼接方式为：https://open-api.alibaba.com/sync?method={api_path}&{query}。如：
+PlainBashC++C#CSSDiffHTML/XMLJavaJavascriptMarkdownPHPPythonRubySQLhttp://open-api.alibaba.com/sync?method=alibaba.icbu.product.schema.get&access_token=test&app_key=12345678&timestamp=1517820392000&sign_method=sha256&simplify=true&cat_id=LP00038357949881&language=en_US&sign=D72D433988FC4727F39E123E3396F557C3E53DEC392C1992C77812579DAA7CD2
+
+二、新平台注册API
+以/auth/token/create (生成授权token)调用为例，具体步骤如下：
+1.设置参数值
+公共参数（该示例API不需要传入access_token）：
+app_key = “12345678”timestamp = “1517820392000”sign_method = “sha256”simplify = “true”业务参数：
+code = “3_500102_JxZ05Ux3cnnSSUm6dCxYg6Q26”2.按ASCII顺序排序
+app_key = “12345678”code = “3_500102_JxZ05Ux3cnnSSUm6dCxYg6Q26”sign_method = “sha256”simplify = “true”timestamp = “1517820392000”3.拼接参数名与参数值
+PlainBashC++C#CSSDiffHTML/XMLJavaJavascriptMarkdownPHPPythonRubySQLapp_key12345678code3_500102_JxZ05Ux3cnnSSUm6dCxYg6Q26sign_methodsha256simplifytruetimestamp1517820392000
+
+4.添加API名称至拼接字符串开头
+PlainBashC++C#CSSDiffHTML/XMLJavaJavascriptMarkdownPHPPythonRubySQL/auth/token/createapp_key12345678code3_500102_JxZ05Ux3cnnSSUm6dCxYg6Q26sign_methodsha256simplifytruetimestamp1517820392000
+
+5.生成签名
+假设app的secret为helloworld，则签名结果为：
+PlainBashC++C#CSSDiffHTML/XMLJavaJavascriptMarkdownPHPPythonRubySQLhex(sha256(/auth/token/createapp_key12345678code3_500102_JxZ05Ux3cnnSSUm6dCxYg6Q26sign_methodsha256simplifytruetimestamp1517820392000))=0B409A354C6FB222EE2C8095002ACDB2D30566151D1A2361AEE7D2627B9BCBEA
+
+6.组装HTTP请求
+将所有参数名和参数值采用utf-8进行URL编码（参数顺序可随意，但必须要包括签名参数），然后通过GET或POST（含byte[]类型参数）发起请求，拼接方式为：https://open-api.alibaba.com/rest{api_path}?{query}。如：
+PlainBashC++C#CSSDiffHTML/XMLJavaJavascriptMarkdownPHPPythonRubySQLhttp://open-api.alibaba.com/rest/auth/token/create?app_key=12345678&code=3_500102_JxZ05Ux3cnnSSUm6dCxYg6Q26&timestamp=1517820392000&sign_method=sha256&simplify=true&sign=0B409A354C6FB222EE2C8095002ACDB2D30566151D1A2361AEE7D2627B9BCBEA
+
+注意事项
+所有的请求和响应数据编码皆为utf-8格式，URL里的所有参数名和参数值请做URL编码。如果请求的Content-Type是application/x-www-form-urlencoded，则HTTP Body体里的所有参数值也做URL编码；如果是multipart/form-data格式，每个表单字段的参数值无需编码,但每个表单字段的charset部分需要指定为utf-8。参数名与参数值拼装起来的URL长度小于1024个字符时，可以用GET发起请求；参数类型含byte[]类型或拼装好的请求URL过长时，必须用POST发起请求。所有API都可以用POST发起请求。生成签名（sign）仅对未使用国际站官方SDK进行API调用时需要操作，如使用了国际站官方SDK，该步骤SDK会自动完成。

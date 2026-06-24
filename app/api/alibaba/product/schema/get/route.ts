@@ -2,10 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import {
   buildIopParams,
   callIopApi,
+  buildIopSyncParams,
+  callIopSyncApi,
   getAccessTokenFromRequest,
   iopGatewayBase,
   resolveIopApiUrl,
   redact,
+  syncGatewayUrl,
 } from "../../../_lib/iop";
 import {
   buildTopParams,
@@ -129,7 +132,7 @@ async function handle(request: NextRequest) {
     }
 
     const publishRequest = buildPublishRequest(request, body);
-    const protocol = request.nextUrl.searchParams.get("protocol") || "top";
+    const protocol = request.nextUrl.searchParams.get("protocol") || "sync";
     const gateway = resolveTopGatewayUrl(
       request.nextUrl.searchParams.get("gateway") || "",
     );
@@ -141,8 +144,34 @@ async function handle(request: NextRequest) {
       access_token: accessToken || "DRY_RUN_ACCESS_TOKEN",
       param_product_top_publish_request: JSON.stringify(publishRequest),
     };
+    const syncApiParams = {
+      session: accessToken || "DRY_RUN_ACCESS_TOKEN",
+      cat_id: String(publishRequest.cat_id),
+      language: String(publishRequest.language),
+      publish_type: String(publishRequest.publish_type),
+      version: String(publishRequest.version),
+      ...(publishRequest.productId
+        ? { productId: String(publishRequest.productId) }
+        : {}),
+    };
 
     if (isDryRun) {
+      if (protocol === "sync") {
+        const signed = buildIopSyncParams(API_NAME, syncApiParams);
+        return NextResponse.json({
+          ok: true,
+          gateway: syncGatewayUrl(),
+          url: `${syncGatewayUrl()}?${new URLSearchParams(signed).toString()}`,
+          method: API_NAME,
+          protocol: "iop-sync",
+          httpMethod: request.nextUrl.searchParams.get("httpMethod") || "GET",
+          publishRequest,
+          redactedPayload: redact(signed),
+          note:
+            "Official docId=134 marks alibaba.icbu.product.schema.get as an original-platform migration API. It uses /sync and signs method as a normal sorted parameter.",
+        });
+      }
+
       if (protocol === "iop") {
         const iopMode = request.nextUrl.searchParams.get("iopMode") || "dot-path";
         const transport =
@@ -177,6 +206,34 @@ async function handle(request: NextRequest) {
         publishRequest,
         redactedPayload: redact(signed),
       });
+    }
+
+    if (protocol === "sync") {
+      const httpMethod =
+        request.nextUrl.searchParams.get("httpMethod") === "POST"
+          ? "POST"
+          : "GET";
+      const result = await callIopSyncApi({
+        apiName: API_NAME,
+        apiParams: syncApiParams,
+        httpMethod,
+      });
+      const xml = extractSchemaXml(result.data);
+
+      return NextResponse.json(
+        {
+          ...result,
+          data: redact(result.data),
+          schema: xml
+            ? {
+                hasXml: true,
+                xmlLength: xml.length,
+                summary: summarizeSchema(xml),
+              }
+            : { hasXml: false },
+        },
+        { status: result.ok ? 200 : 502 },
+      );
     }
 
     if (protocol === "iop") {
