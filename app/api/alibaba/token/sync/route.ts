@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { readStoredToken, writeStoredToken } from "../../_lib/tokenStore";
-import { decryptTokenCookie } from "../../../_lib/iop";
+import { decryptTokenCookie } from "../../_lib/iop";
 
 export const runtime = "nodejs";
 
