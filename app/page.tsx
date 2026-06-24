@@ -1,6 +1,5 @@
-"use client";
-
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { headers } from "next/headers";
+import { ReactNode } from "react";
 
 type DashboardResponse = {
   ok: boolean;
@@ -69,18 +68,11 @@ type DashboardResponse = {
   error?: string;
 };
 
-type ApiState<T> = {
-  loading: boolean;
-  error: string | null;
-  data: T | null;
-  lastUpdated: string | null;
-};
-
-const initialState: ApiState<DashboardResponse> = {
-  loading: false,
-  error: null,
-  data: null,
-  lastUpdated: null,
+type PageProps = {
+  searchParams?: Promise<{
+    product_id?: string;
+    days?: string;
+  }>;
 };
 
 function formatValue(value: unknown) {
@@ -151,7 +143,7 @@ function Metric({
     accent: "border-sky-200",
   }[tone];
   return (
-    <div className={`rounded-2xl border ${border} bg-zinc-50 p-4`}>
+    <div className={`rounded-2xl border ${border} bg-zinc-50 p-4`}> 
       <div className="text-xs font-medium text-zinc-500">{label}</div>
       <div className="mt-2 text-2xl font-semibold tracking-tight text-zinc-950">{value}</div>
       {hint ? <div className="mt-1 text-xs text-zinc-500">{hint}</div> : null}
@@ -172,52 +164,27 @@ function ListBlock({ items }: { items: string[] }) {
   );
 }
 
-export default function Home() {
-  const [productId, setProductId] = useState("1601815992580");
-  const [days, setDays] = useState("7");
-  const [state, setState] = useState<ApiState<DashboardResponse>>(initialState);
+async function fetchDashboard(productId: string, days: string): Promise<DashboardResponse> {
+  const params = new URLSearchParams();
+  if (productId) params.set("product_id", productId);
+  if (days) params.set("days", days);
+  const hdrs = await headers();
+  const host = hdrs.get("x-forwarded-host") || hdrs.get("host") || "127.0.0.1:3000";
+  const proto = hdrs.get("x-forwarded-proto") || "http";
+  const base = process.env.NEXT_PUBLIC_SITE_URL || `${proto}://${host}`;
+  const url = `${base}/api/alibaba/ops/dashboard?${params.toString()}`;
+  const response = await fetch(url, { cache: "no-store" });
+  return response.json();
+}
 
-  const query = useMemo(() => {
-    const params = new URLSearchParams();
-    if (productId) params.set("product_id", productId);
-    if (days) params.set("days", days);
-    return params.toString();
-  }, [productId, days]);
-
-  const loadDashboard = useCallback(async () => {
-    setState((current) => ({ ...current, loading: true, error: null }));
-    try {
-      const response = await fetch(`/api/alibaba/ops/dashboard?${query}`, {
-        cache: "no-store",
-      });
-      const data = (await response.json()) as DashboardResponse;
-      setState({
-        loading: false,
-        error: response.ok ? null : data.error || "请求失败",
-        data,
-        lastUpdated: new Date().toLocaleString("zh-CN"),
-      });
-    } catch (error) {
-      setState({
-        loading: false,
-        error: error instanceof Error ? error.message : String(error),
-        data: null,
-        lastUpdated: new Date().toLocaleString("zh-CN"),
-      });
-    }
-  }, [query]);
-
-  useEffect(() => {
-    const timer = window.setTimeout(() => {
-      void loadDashboard();
-    }, 0);
-    return () => window.clearTimeout(timer);
-  }, [loadDashboard]);
-
-  const dashboard = state.data;
-  const productError = dashboard?.productReport?.error;
-  const diagnosisItems = dashboard?.diagnosis?.topActions || [];
-  const schemaRequiredCount = dashboard?.schemaChecklist?.summary?.requiredCount ?? dashboard?.schemaChecklist?.checklist?.length;
+export default async function Home({ searchParams }: PageProps) {
+  const params = (await searchParams) || {};
+  const productId = params.product_id || "1601815992580";
+  const days = params.days || "7";
+  const dashboard = await fetchDashboard(productId, days);
+  const productError = dashboard.productReport?.error;
+  const diagnosisItems = dashboard.diagnosis?.topActions || [];
+  const schemaRequiredCount = dashboard.schemaChecklist?.summary?.requiredCount ?? dashboard.schemaChecklist?.checklist?.length;
 
   return (
     <main className="min-h-screen bg-zinc-50 text-zinc-950">
@@ -226,12 +193,12 @@ export default function Home() {
           <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div className="space-y-2">
               <div className="flex flex-wrap gap-2">
-                <Badge tone={Boolean(dashboard?.reportOk) ? "good" : "warn"}>{dashboard?.reportOk ? "报表就绪" : "等待数据"}</Badge>
-                <Badge tone={Boolean(dashboard?.tokenStatus?.hasToken) ? "good" : "bad"}>
-                  {dashboard?.tokenStatus?.hasToken ? "Token 已连接" : "Token 未就绪"}
+                <Badge tone={Boolean(dashboard.reportOk) ? "good" : "warn"}>{dashboard.reportOk ? "报表就绪" : "等待数据"}</Badge>
+                <Badge tone={Boolean(dashboard.tokenStatus?.hasToken) ? "good" : "bad"}>
+                  {dashboard.tokenStatus?.hasToken ? "Token 已连接" : "Token 未就绪"}
                 </Badge>
-                <Badge tone={Boolean(dashboard?.envStatus?.ok) ? "good" : "warn"}>
-                  {dashboard?.envStatus?.ok ? "环境已配" : "环境需检查"}
+                <Badge tone={Boolean(dashboard.envStatus?.ok) ? "good" : "warn"}>
+                  {dashboard.envStatus?.ok ? "环境已配" : "环境需检查"}
                 </Badge>
               </div>
               <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
@@ -242,12 +209,12 @@ export default function Home() {
                 后面再接账户报告、关键词报告、推荐出价和推词。
               </p>
             </div>
-            <div className="flex flex-wrap gap-3">
+            <form className="flex flex-wrap gap-3" action="/" method="get">
               <label className="flex items-center gap-2 rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm">
                 <span className="text-zinc-500">商品</span>
                 <input
-                  value={productId}
-                  onChange={(event) => setProductId(event.target.value)}
+                  name="product_id"
+                  defaultValue={productId}
                   className="w-44 bg-transparent text-zinc-950 outline-none"
                   placeholder="1601815992580"
                 />
@@ -255,55 +222,47 @@ export default function Home() {
               <label className="flex items-center gap-2 rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm">
                 <span className="text-zinc-500">天数</span>
                 <input
-                  value={days}
-                  onChange={(event) => setDays(event.target.value)}
+                  name="days"
+                  defaultValue={days}
                   className="w-16 bg-transparent text-zinc-950 outline-none"
                 />
               </label>
               <button
-                type="button"
-                onClick={loadDashboard}
+                type="submit"
                 className="rounded-2xl bg-zinc-950 px-5 py-3 text-sm font-medium text-white transition hover:bg-zinc-800"
               >
-                {state.loading ? "刷新中..." : "拉取数据"}
+                刷新数据
               </button>
-            </div>
+            </form>
           </div>
           <div className="mt-4 text-xs text-zinc-500">
-            最近更新：{state.lastUpdated || "尚未刷新"}
-            {dashboard?.generatedAt ? ` · 服务端时间 ${new Date(dashboard.generatedAt).toLocaleString("zh-CN")}` : ""}
+            服务端时间：{dashboard.generatedAt ? new Date(dashboard.generatedAt).toLocaleString("zh-CN") : "未知"}
           </div>
         </header>
-
-        {state.error ? (
-          <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">
-            {state.error}
-          </div>
-        ) : null}
 
         <section className="grid gap-4 md:grid-cols-3 xl:grid-cols-5">
           <Metric
             label="询盘建议"
-            value={formatValue(dashboard?.diagnosis?.summary?.inquiries)}
+            value={formatValue(dashboard.diagnosis?.summary?.inquiries)}
             hint="诊断汇总中的询盘数"
             tone="accent"
           />
           <Metric
             label="商品评分"
-            value={formatValue(dashboard?.productScore?.finalScore)}
-            hint={`精品标记：${formatValue(dashboard?.productScore?.boutiqueTag)}`}
+            value={formatValue(dashboard.productScore?.finalScore)}
+            hint={`精品标记：${formatValue(dashboard.productScore?.boutiqueTag)}`}
             tone="good"
           />
           <Metric
             label="诊断条数"
-            value={formatValue(dashboard?.diagnosis?.count)}
+            value={formatValue(dashboard.diagnosis?.count)}
             hint="当前输出的规则建议数量"
           />
           <Metric
             label="报表状态"
-            value={dashboard?.reportOk ? "成功" : "待排查"}
+            value={dashboard.reportOk ? "成功" : "待排查"}
             hint={productError ? `${formatValue(productError.code)} ${formatValue(productError.msg)}` : "正常时会显示成功"}
-            tone={dashboard?.reportOk ? "good" : "warn"}
+            tone={dashboard.reportOk ? "good" : "warn"}
           />
           <Metric
             label="Schema 清单"
@@ -317,34 +276,34 @@ export default function Home() {
             <div className="space-y-4">
               <div>
                 <div className="mb-2 text-xs font-medium uppercase tracking-wide text-zinc-500">信号</div>
-                <ListBlock items={dashboard?.signals || []} />
+                <ListBlock items={dashboard.signals || []} />
               </div>
               <div>
                 <div className="mb-2 text-xs font-medium uppercase tracking-wide text-zinc-500">下一步</div>
-                <ListBlock items={dashboard?.actions || []} />
+                <ListBlock items={dashboard.actions || []} />
               </div>
               <div>
                 <div className="mb-2 text-xs font-medium uppercase tracking-wide text-zinc-500">建议路线</div>
-                <ListBlock items={dashboard?.nextSuggestions || []} />
+                <ListBlock items={dashboard.nextSuggestions || []} />
               </div>
             </div>
           </Panel>
 
           <Panel
             title="授权和报错"
-            right={<Badge tone={dashboard?.tokenStatus?.hasToken ? "good" : "bad"}>{dashboard?.tokenStatus?.hasToken ? "已授权" : "未授权"}</Badge>}
+            right={<Badge tone={dashboard.tokenStatus?.hasToken ? "good" : "bad"}>{dashboard.tokenStatus?.hasToken ? "已授权" : "未授权"}</Badge>}
           >
             <div className="space-y-4 text-sm">
               <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-4">
                 <div className="mb-2 text-xs font-medium uppercase tracking-wide text-zinc-500">Token</div>
                 <pre className="whitespace-pre-wrap break-words text-xs leading-5 text-zinc-700">
-                  {formatValue(dashboard?.tokenStatus)}
+                  {formatValue(dashboard.tokenStatus)}
                 </pre>
               </div>
               <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-4">
                 <div className="mb-2 text-xs font-medium uppercase tracking-wide text-zinc-500">环境</div>
                 <pre className="whitespace-pre-wrap break-words text-xs leading-5 text-zinc-700">
-                  {formatValue(dashboard?.envStatus)}
+                  {formatValue(dashboard.envStatus)}
                 </pre>
               </div>
               <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-4">
@@ -366,7 +325,7 @@ export default function Home() {
 
         <section className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
           <Panel title="推广明细">
-            {dashboard?.diagnosis?.summary ? (
+            {dashboard.diagnosis?.summary ? (
               <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
                 {Object.entries(dashboard.diagnosis.summary).map(([key, value]) => (
                   <div key={key} className="rounded-2xl border border-zinc-200 bg-zinc-50 p-4">
@@ -376,7 +335,7 @@ export default function Home() {
                 ))}
               </div>
             ) : (
-              <div className="text-sm text-zinc-500">暂无诊断汇总，点击“拉取数据”。</div>
+              <div className="text-sm text-zinc-500">暂无诊断汇总。</div>
             )}
           </Panel>
 
@@ -434,7 +393,7 @@ export default function Home() {
 
           <Panel title="原始反馈">
             <pre className="max-h-[420px] overflow-auto rounded-2xl border border-zinc-200 bg-zinc-950 p-4 text-xs leading-5 text-zinc-100">
-{JSON.stringify(dashboard || (state.error ? { ok: false, error: state.error } : { ok: false, error: "点击拉取数据" }), null, 2)}
+{JSON.stringify(dashboard || { ok: false, error: "无数据" }, null, 2)}
             </pre>
           </Panel>
         </section>

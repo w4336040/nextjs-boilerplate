@@ -57,13 +57,14 @@ function summarizeDiagnosis(diagnosis: unknown) {
 
 export async function GET(request: NextRequest) {
   try {
+    const productId = request.nextUrl.searchParams.get("product_id") || "1601815992580";
     const [tokenStatus, envStatus, schemaChecklist, productReport, diagnosis, productScore] = await Promise.all([
       fetchJson(request, "/api/alibaba/token/status"),
       fetchJson(request, "/api/alibaba/env"),
       fetchJson(request, "/api/alibaba/product/schema/checklist"),
       fetchJson(request, "/api/alibaba/ad/product-report"),
       fetchJson(request, "/api/alibaba/ad/product-diagnosis"),
-      fetchJson(request, "/api/alibaba/product/score?product_id=1601815992580"),
+      fetchJson(request, `/api/alibaba/product/score?product_id=${encodeURIComponent(productId)}`),
     ]);
 
     const reportError = pickReportError(productReport);
@@ -106,7 +107,7 @@ export async function GET(request: NextRequest) {
       },
       diagnosis: diagnosisSummary,
       productScore: {
-        productId: "1601815992580",
+        productId,
         finalScore: scoreData?.final_score ?? null,
         boutiqueTag: scoreData?.boutique_tag ?? null,
         problemMap: scoreData?.problem_map ?? null,
