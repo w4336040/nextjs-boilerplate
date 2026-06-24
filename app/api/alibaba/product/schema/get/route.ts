@@ -4,7 +4,7 @@ import {
   callIopApi,
   buildIopSyncParams,
   callIopSyncApi,
-  getAccessTokenFromRequest,
+  getAccessTokenFromStorageOrRequest,
   iopGatewayBase,
   resolveIopApiUrl,
   redact,
@@ -153,7 +153,7 @@ async function handle(request: NextRequest) {
   try {
     const body = await parseBody(request);
     const isDryRun = request.nextUrl.searchParams.get("dryRun") === "1";
-    const accessToken = getAccessTokenFromRequest(request);
+    const accessToken = await getAccessTokenFromStorageOrRequest(request);
     if (!accessToken && !isDryRun) {
       return NextResponse.json(
         {
