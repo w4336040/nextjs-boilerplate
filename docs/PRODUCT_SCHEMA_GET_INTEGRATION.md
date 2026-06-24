@@ -63,3 +63,25 @@ Optional:
 
 This endpoint is read-only. It does not publish or edit products.
 
+## Parsed Operations Foundation
+
+Checklist endpoint:
+
+```text
+https://api.viecart.com/api/alibaba/product/schema/checklist?cat_id=333&language=en_US&publish_type=default
+```
+
+Purpose:
+
+- Calls the working `schema.get` endpoint.
+- Parses the returned XML into fields, rules, options, and required flags.
+- Produces a grouped checklist for product publishing and later AI operation.
+
+Offline parser endpoint:
+
+```text
+POST /api/alibaba/product/schema/parse
+{ "xml": "<itemSchema>...</itemSchema>" }
+```
+
+This is useful for debugging saved schema XML without calling Alibaba again.
