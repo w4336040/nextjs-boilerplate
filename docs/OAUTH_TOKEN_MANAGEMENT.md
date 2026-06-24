@@ -1,114 +1,52 @@
 # OAuth And Token Management
 
-This project uses a safe-by-default OAuth flow for Alibaba Open Platform.
+This project supports a safe-by-default Alibaba OAuth flow.
 
 ## What This Module Does
 
 - Builds the Alibaba authorization URL from `.env`.
 - Opens a browser for seller authorization.
-- Listens on the local callback URL.
 - Validates OAuth `state`.
 - Exchanges authorization `code` for a token response.
-- Stores the local token response in `tokens/alibaba_token.json`.
+- Stores the token response in a server-side encrypted token store when configured.
+- Falls back to an encrypted HttpOnly cookie for local browser-only use.
 - Redacts secrets when showing status.
 - Refreshes tokens when `refresh_token` is available.
-- Provides a command to print a current `access_token` for API calls.
 
-## Local Files
+## Production Flow
 
-Ignored secret files:
+1. Seller authorizes once in the browser.
+2. OAuth callback receives the token response.
+3. The callback encrypts and writes the token to server-side storage.
+4. APIs read token from server storage first, then cookie as fallback.
+5. Refresh jobs can update the stored token later.
 
-```text
-.env
-tokens/
-```
+## Recommended Storage
 
-Committed template files:
+- Vercel KV
+- Upstash Redis
 
-```text
-.env.example
-tools/auth_manager.py
-tools/oauth_token.py
-```
-
-## Commands
-
-Use the bundled Python runtime on this Windows machine:
-
-```powershell
-$Py = "C:\Users\Administrator\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\python.exe"
-```
-
-Login:
-
-```powershell
-& $Py tools\auth_manager.py login
-```
-
-Check token status:
-
-```powershell
-& $Py tools\auth_manager.py status
-```
-
-Refresh token:
-
-```powershell
-& $Py tools\auth_manager.py refresh
-```
-
-Print a usable access token for the next API call:
-
-```powershell
-& $Py tools\auth_manager.py access-token
-```
-
-Delete local token:
-
-```powershell
-& $Py tools\auth_manager.py logout
-```
-
-## Required Environment Variables
+## Environment Variables
 
 ```env
-ALIBABA_APP_KEY=your_app_key_here
-ALIBABA_APP_SECRET=your_new_app_secret_here
-ALIBABA_REDIRECT_URI=http://127.0.0.1:8765/callback
-ALIBABA_AUTH_URL=official_alibaba_authorize_url
-ALIBABA_TOKEN_URL=official_alibaba_token_url
-ALIBABA_SCOPE=
-ALIBABA_STATE=local-dev
+ALIBABA_TOKEN_STORE_KEY=alibaba:default
+ALIBABA_TOKEN_STORE_SECRET=your_random_secret
+UPSTASH_REDIS_REST_URL=https://your-upstash-url.upstash.io
+UPSTASH_REDIS_REST_TOKEN=your_upstash_rest_token
 ```
 
-## Provider Parameter Overrides
+## Manual Sync
 
-If Alibaba's official OAuth docs use different parameter names, configure them
-without changing code:
+If the browser already has a valid token cookie, you can push it to server storage:
 
-```env
-ALIBABA_AUTH_CLIENT_ID_PARAM=client_id
-ALIBABA_AUTH_REDIRECT_URI_PARAM=redirect_uri
-ALIBABA_AUTH_RESPONSE_TYPE_PARAM=response_type
-ALIBABA_AUTH_STATE_PARAM=state
-ALIBABA_AUTH_SCOPE_PARAM=scope
-
-ALIBABA_TOKEN_GRANT_TYPE_PARAM=grant_type
-ALIBABA_TOKEN_CLIENT_ID_PARAM=client_id
-ALIBABA_TOKEN_CLIENT_SECRET_PARAM=client_secret
-ALIBABA_TOKEN_REDIRECT_URI_PARAM=redirect_uri
-ALIBABA_TOKEN_CODE_PARAM=code
-ALIBABA_TOKEN_REFRESH_TOKEN_PARAM=refresh_token
+```http
+POST /api/alibaba/token/sync
 ```
 
 ## Production Rules
 
-For production deployment:
-
-- Store `APP_SECRET` in Vercel Environment Variables or a secret manager.
-- Store tokens in a database with encryption at rest.
+- Store tokens server-side and encrypt before write.
 - Never print full tokens in logs.
 - Rotate leaked secrets immediately.
 - Refresh tokens through a scheduled job.
 - Keep a token audit log with timestamps and result status.
-
