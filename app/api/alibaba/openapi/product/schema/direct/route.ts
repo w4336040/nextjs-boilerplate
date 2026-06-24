@@ -119,7 +119,7 @@ function buildTopParams(request: NextRequest, body: Record<string, unknown>) {
 async function callTop(params: TopParams) {
   const gateway =
     process.env.ALIBABA_OPENAPI_GATEWAY_URL ||
-    "https://eco.taobao.com/router/rest";
+    "https://gw.api.taobao.com/router/rest";
   const response = await fetch(gateway, {
     method: "POST",
     headers: {
@@ -161,7 +161,7 @@ async function handle(request: NextRequest) {
         ok: true,
         gateway:
           process.env.ALIBABA_OPENAPI_GATEWAY_URL ||
-          "https://eco.taobao.com/router/rest",
+          "https://gw.api.taobao.com/router/rest",
         payloadKeys: Object.keys(params),
         redactedPayload: redact(params),
         notes: [
@@ -194,4 +194,3 @@ async function handle(request: NextRequest) {
     );
   }
 }
-

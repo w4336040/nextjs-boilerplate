@@ -8,8 +8,18 @@ export function topGatewayUrl() {
   return (
     process.env.ALIBABA_TOP_GATEWAY_URL ||
     process.env.ALIBABA_OPENAPI_GATEWAY_URL ||
-    "https://eco.taobao.com/router/rest"
+    "https://gw.api.taobao.com/router/rest"
   );
+}
+
+export function resolveTopGatewayUrl(modeOrUrl = "") {
+  const value = modeOrUrl.trim();
+  if (!value) return topGatewayUrl();
+  if (value === "gw") return "https://gw.api.taobao.com/router/rest";
+  if (value === "gw-http") return "http://gw.api.taobao.com/router/rest";
+  if (value === "eco") return "https://eco.taobao.com/router/rest";
+  if (value.startsWith("https://") || value.startsWith("http://")) return value;
+  return topGatewayUrl();
 }
 
 export function timestampGmt8() {
@@ -72,9 +82,10 @@ export function buildTopParams(method: string, apiParams: TopParams) {
 export async function callTopApi(options: {
   method: string;
   apiParams: TopParams;
+  gatewayUrl?: string;
 }) {
   const params = buildTopParams(options.method, options.apiParams);
-  const url = topGatewayUrl();
+  const url = resolveTopGatewayUrl(options.gatewayUrl);
   const response = await fetch(url, {
     method: "POST",
     headers: {

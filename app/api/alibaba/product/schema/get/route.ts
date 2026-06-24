@@ -3,7 +3,11 @@ import {
   getAccessTokenFromRequest,
   redact,
 } from "../../../_lib/iop";
-import { buildTopParams, callTopApi, topGatewayUrl } from "../../../_lib/top";
+import {
+  buildTopParams,
+  callTopApi,
+  resolveTopGatewayUrl,
+} from "../../../_lib/top";
 
 export const runtime = "nodejs";
 
@@ -120,6 +124,9 @@ async function handle(request: NextRequest) {
     }
 
     const publishRequest = buildPublishRequest(request, body);
+    const gateway = resolveTopGatewayUrl(
+      request.nextUrl.searchParams.get("gateway") || "",
+    );
     const apiParams = {
       session: accessToken || "DRY_RUN_ACCESS_TOKEN",
       param_product_top_publish_request: JSON.stringify(publishRequest),
@@ -129,8 +136,8 @@ async function handle(request: NextRequest) {
       const signed = buildTopParams(API_NAME, apiParams);
       return NextResponse.json({
         ok: true,
-        gateway: topGatewayUrl(),
-        url: topGatewayUrl(),
+        gateway,
+        url: gateway,
         method: API_NAME,
         protocol: "top",
         publishRequest,
@@ -141,6 +148,7 @@ async function handle(request: NextRequest) {
     const result = await callTopApi({
       method: API_NAME,
       apiParams,
+      gatewayUrl: gateway,
     });
     const xml = extractSchemaXml(result.data);
 

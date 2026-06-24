@@ -5,7 +5,7 @@ The ICBU product schema APIs use TOP Router.
 Official docs for `alibaba.icbu.product.schema.render.draft` show:
 
 ```text
-HTTPS gateway: https://eco.taobao.com/router/rest
+HTTPS gateway: https://gw.api.taobao.com/router/rest
 method: alibaba.icbu.product.schema.render.draft
 sign_method: hmac or md5
 session: required when the API is marked "需要授权"
@@ -33,10 +33,9 @@ app console.
 ## Vercel Variables
 
 ```env
-ALIBABA_OPENAPI_GATEWAY_URL=https://eco.taobao.com/router/rest
+ALIBABA_OPENAPI_GATEWAY_URL=https://gw.api.taobao.com/router/rest
 ALIBABA_TOP_SIGN_METHOD=hmac
 ALIBABA_TOP_SESSION=
 ```
 
 Leave `ALIBABA_TOP_SESSION` empty until a valid session/token is confirmed.
-
