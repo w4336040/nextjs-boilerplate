@@ -57,12 +57,12 @@ function buildPublishRequest(request: NextRequest, body: Record<string, unknown>
       ["publish_type", "publishType"],
       "default",
     ),
-    cat_id: catId ? Number(catId) : 333,
+    cat_id: catId || 333,
     language: stringParam(request, body, ["language"], "en_US"),
     version: stringParam(request, body, ["version"], "trade.1.1"),
   };
 
-  if (productId) payload.productId = Number(productId);
+  if (productId) payload.productId = productId;
   return payload;
 }
 
@@ -72,16 +72,22 @@ function buildSyncApiParams(
   accessToken: string,
 ) {
   const tokenParam = request.nextUrl.searchParams.get("tokenParam") || "access_token";
+  const payloadMode = request.nextUrl.searchParams.get("payloadMode") || "object";
   const tokenValue = accessToken || "DRY_RUN_ACCESS_TOKEN";
-  const params: Record<string, string> = {
-    cat_id: String(publishRequest.cat_id),
-    language: String(publishRequest.language),
-    publish_type: String(publishRequest.publish_type),
-    version: String(publishRequest.version),
-    ...(publishRequest.productId
-      ? { productId: String(publishRequest.productId) }
-      : {}),
-  };
+  const params: Record<string, string> =
+    payloadMode === "flat"
+      ? {
+          cat_id: String(publishRequest.cat_id),
+          language: String(publishRequest.language),
+          publish_type: String(publishRequest.publish_type),
+          version: String(publishRequest.version),
+          ...(publishRequest.productId
+            ? { productId: String(publishRequest.productId) }
+            : {}),
+        }
+      : {
+          param_product_top_publish_request: JSON.stringify(publishRequest),
+        };
 
   if (tokenParam === "session" || tokenParam === "both") {
     params.session = tokenValue;
