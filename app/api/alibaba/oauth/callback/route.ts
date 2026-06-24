@@ -1,4 +1,4 @@
-import { createCipheriv, createHash, randomBytes } from "crypto";
+import { createCipheriv, createHash, createHmac, randomBytes } from "crypto";
 import { NextRequest, NextResponse } from "next/server";
 
 export const runtime = "nodejs";
@@ -30,6 +30,10 @@ function encryptForCookie(payload: unknown) {
 }
 
 async function exchangeCode(code: string) {
+  if (process.env.ALIBABA_TOKEN_REQUEST_FORMAT === "iop") {
+    return exchangeCodeWithIop(code);
+  }
+
   const tokenUrl = requireEnv("ALIBABA_TOKEN_URL");
   const format = process.env.ALIBABA_TOKEN_REQUEST_FORMAT || "json";
   const payload: Record<string, string> = {
@@ -54,6 +58,63 @@ async function exchangeCode(code: string) {
       format === "form"
         ? new URLSearchParams(payload).toString()
         : JSON.stringify(payload),
+    cache: "no-store",
+  });
+
+  const text = await response.text();
+  let data: unknown;
+  try {
+    data = JSON.parse(text);
+  } catch {
+    data = { raw: text };
+  }
+
+  if (!response.ok) {
+    return { ok: false, status: response.status, data };
+  }
+
+  return { ok: true, status: response.status, data };
+}
+
+function iopGatewayBase() {
+  return (
+    process.env.ALIBABA_IOP_GATEWAY_URL ||
+    "https://open-api.alibaba.com/rest"
+  ).replace(/\/$/, "");
+}
+
+function signIopRequest(apiName: string, params: Record<string, string>) {
+  const assembled =
+    apiName +
+    Object.keys(params)
+      .sort()
+      .filter((key) => key !== "sign" && params[key] !== "")
+      .map((key) => `${key}${params[key]}`)
+      .join("");
+
+  return createHmac("sha256", requireEnv("ALIBABA_APP_SECRET"))
+    .update(assembled, "utf8")
+    .digest("hex")
+    .toUpperCase();
+}
+
+async function exchangeCodeWithIop(code: string) {
+  const apiName = "/auth/token/create";
+  const params: Record<string, string> = {
+    app_key: requireEnv("ALIBABA_APP_KEY"),
+    timestamp: String(Date.now()),
+    sign_method: process.env.ALIBABA_IOP_SIGN_METHOD || "sha256",
+    code,
+  };
+  params.sign = signIopRequest(apiName, params);
+
+  const response = await fetch(`${iopGatewayBase()}${apiName}`, {
+    method: "POST",
+    headers: {
+      "accept-encoding": "gzip",
+      "content-type": "application/x-www-form-urlencoded;charset=utf-8",
+    },
+    body: new URLSearchParams(params).toString(),
     cache: "no-store",
   });
 
@@ -128,4 +189,3 @@ export async function GET(request: NextRequest) {
     );
   }
 }
-

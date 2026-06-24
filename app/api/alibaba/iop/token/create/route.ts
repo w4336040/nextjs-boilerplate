@@ -15,7 +15,7 @@ function gatewayBase() {
   return (
     process.env.ALIBABA_IOP_GATEWAY_URL ||
     process.env.ALIBABA_OPENAPI_GATEWAY_URL ||
-    "https://openapi-api.alibaba.com/rest"
+    "https://open-api.alibaba.com/rest"
   ).replace(/\/$/, "");
 }
 
@@ -95,8 +95,11 @@ async function callIop(apiName: string, params: IopParams) {
   const url = `${gatewayBase()}${apiName}`;
   const response = await fetch(url, {
     method: "POST",
-    headers: { "content-type": "application/json;charset=utf-8" },
-    body: JSON.stringify(params),
+    headers: {
+      "accept-encoding": "gzip",
+      "content-type": "application/x-www-form-urlencoded;charset=UTF-8",
+    },
+    body: new URLSearchParams(params).toString(),
     cache: "no-store",
   });
   const text = await response.text();
@@ -161,4 +164,3 @@ async function handle(request: NextRequest) {
     );
   }
 }
-
