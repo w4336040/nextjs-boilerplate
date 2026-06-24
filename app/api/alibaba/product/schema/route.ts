@@ -1,5 +1,6 @@
 import { createDecipheriv, createHash } from "crypto";
 import { NextRequest, NextResponse } from "next/server";
+import { readStoredToken } from "../../../_lib/tokenStore";
 
 export const runtime = "nodejs";
 
@@ -33,48 +34,55 @@ function getAccessToken(data: unknown) {
 }
 
 export async function GET(request: NextRequest) {
-  const tokenCookie = request.cookies.get("alibaba_token")?.value;
-  if (!tokenCookie) {
+  try {
+    const stored = await readStoredToken();
+    const tokenCookie = request.cookies.get("alibaba_token")?.value;
+    const tokenData = stored || (tokenCookie ? decryptCookie(tokenCookie) : null);
+    if (!tokenData) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: "No Alibaba token found. Visit /api/alibaba/oauth/start first.",
+        },
+        { status: 401 },
+      );
+    }
+
+    const accessToken = getAccessToken(tokenData);
+    if (!accessToken) {
+      return NextResponse.json(
+        { ok: false, error: "Token response does not contain access_token." },
+        { status: 400 },
+      );
+    }
+
+    const categoryId = request.nextUrl.searchParams.get("categoryId");
+    const method =
+      request.nextUrl.searchParams.get("method") ||
+      "alibaba.icbu.product.schema.render.draft";
+
+    if (!categoryId) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: "Missing categoryId. Example: /api/alibaba/product/schema?categoryId=123",
+        },
+        { status: 400 },
+      );
+    }
+
+    return NextResponse.json({
+      ok: false,
+      readyForNextStep: true,
+      method,
+      categoryId,
+      message:
+        "OAuth is ready. The next step is adding Alibaba API request signing once the exact official gateway/signature docs are confirmed.",
+    });
+  } catch (error) {
     return NextResponse.json(
-      {
-        ok: false,
-        error: "No Alibaba token cookie. Visit /api/alibaba/oauth/start first.",
-      },
-      { status: 401 },
+      { ok: false, error: error instanceof Error ? error.message : String(error) },
+      { status: 500 },
     );
   }
-
-  const tokenData = decryptCookie(tokenCookie);
-  const accessToken = getAccessToken(tokenData);
-  if (!accessToken) {
-    return NextResponse.json(
-      { ok: false, error: "Token response does not contain access_token." },
-      { status: 400 },
-    );
-  }
-
-  const categoryId = request.nextUrl.searchParams.get("categoryId");
-  const method =
-    request.nextUrl.searchParams.get("method") ||
-    "alibaba.icbu.product.schema.render.draft";
-
-  if (!categoryId) {
-    return NextResponse.json(
-      {
-        ok: false,
-        error: "Missing categoryId. Example: /api/alibaba/product/schema?categoryId=123",
-      },
-      { status: 400 },
-    );
-  }
-
-  return NextResponse.json({
-    ok: false,
-    readyForNextStep: true,
-    method,
-    categoryId,
-    message:
-      "OAuth is ready. The next step is adding Alibaba API request signing once the exact official gateway/signature docs are confirmed.",
-  });
 }
-
