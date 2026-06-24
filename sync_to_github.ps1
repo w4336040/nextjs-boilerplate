@@ -23,7 +23,7 @@ if (-not $Email) {
 }
 
 Write-Host "Staging safe files..."
-& $Git add README.md .env.example .gitignore tools/oauth_token.py sync_to_github.ps1
+& $Git add README.md .env.example .gitignore tools sync_to_github.ps1 docs app/api/alibaba
 
 Write-Host "Creating commit..."
 $Status = & $Git status --porcelain
