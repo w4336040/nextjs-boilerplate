@@ -1,6 +1,6 @@
 import { createDecipheriv, createHash } from "crypto";
 import { NextRequest, NextResponse } from "next/server";
-import { readStoredToken } from "../../../_lib/tokenStore";
+import { readStoredToken } from "../../_lib/tokenStore";
 
 export const runtime = "nodejs";
 
