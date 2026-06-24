@@ -109,8 +109,9 @@ export async function POST(request: NextRequest) {
 async function handle(request: NextRequest) {
   try {
     const body = await parseBody(request);
+    const isDryRun = request.nextUrl.searchParams.get("dryRun") === "1";
     const accessToken = getAccessTokenFromRequest(request);
-    if (!accessToken) {
+    if (!accessToken && !isDryRun) {
       return NextResponse.json(
         {
           ok: false,
@@ -122,13 +123,13 @@ async function handle(request: NextRequest) {
 
     const publishRequest = buildPublishRequest(request, body);
     const apiParams = {
-      access_token: accessToken,
+      access_token: accessToken || "DRY_RUN_ACCESS_TOKEN",
       param_product_top_publish_request: JSON.stringify(publishRequest),
     };
     const transport =
       request.nextUrl.searchParams.get("transport") === "form" ? "form" : "json";
 
-    if (request.nextUrl.searchParams.get("dryRun") === "1") {
+    if (isDryRun) {
       const signed = buildIopParams(API_NAME, apiParams);
       return NextResponse.json({
         ok: true,
@@ -169,4 +170,3 @@ async function handle(request: NextRequest) {
     );
   }
 }
-
