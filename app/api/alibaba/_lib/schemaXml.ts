@@ -186,6 +186,7 @@ function isOptionalTemplateRequired(field: SchemaField) {
     /custommoreproperty_\d+/.test(path) ||
     /ladderprice_[1-9]\d*/.test(path) ||
     /ladderperiod_[1-9]\d*/.test(path) ||
+    path.includes("company picture") ||
     path.includes("faq") ||
     field.id === "question" ||
     field.id === "answers"
@@ -231,7 +232,19 @@ function hasMatchingFilledValue(required: SchemaField, fields: SchemaField[]) {
     }
 
     if (required.id === "price" && requiredName.includes("sample")) {
-      return filledPath.includes("sample");
+      return filledPath.includes("sample") || filledPath.includes("ladderprice");
+    }
+
+    if (["range_min", "range_max", "unit_type"].includes(required.id)) {
+      return filledPath.includes("ladderprice") || filledPath.includes("price setting");
+    }
+
+    if (required.id === "superText") {
+      return (
+        filledPath.includes("regular editor") ||
+        filledPath.includes("details of the picture") ||
+        filledPath.includes("image")
+      );
     }
 
     return !["price", "quantity", "range_min", "range_max", "unit_type"].includes(
@@ -267,7 +280,6 @@ export function buildProductOptimization(fields: SchemaField[]) {
     const requiredField = requiredFields.find(
       (field) =>
         field.id === item.id &&
-        field.name === item.name &&
         field.path.join("\u0000") === (item.path || []).join("\u0000"),
     );
     return {
