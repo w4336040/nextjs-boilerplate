@@ -32,6 +32,7 @@ export type SchemaChecklistItem = {
   reason: string;
   path?: string[];
   filled?: boolean;
+  valuePreview?: string;
   optionsPreview?: SchemaOption[];
 };
 
@@ -273,6 +274,7 @@ export function buildSchemaChecklist(fields: SchemaField[]) {
       group: groupForField(field),
       reason: "requiredRule=true",
       path: field.path,
+      valuePreview: field.value.trim().slice(0, 120),
       optionsPreview: field.options.slice(0, 8),
     }))
     .filter((item) => {
@@ -322,18 +324,29 @@ export function buildProductOptimization(fields: SchemaField[]) {
       name: field.name || field.id,
       path: field.path,
       valueLength: field.value.length,
+      valuePreview: field.value.trim().slice(0, 120),
       suggestion:
         "\u8865\u5145\u66f4\u5b8c\u6574\u7684\u82f1\u6587\u6807\u9898\u3001\u5173\u952e\u8bcd\u6216\u5356\u70b9\u6587\u672c\u3002",
     })),
     imageCoverage: {
       fieldCount: imageFields.length,
       filledCount: imageFields.filter((field) => field.filled).length,
+      fieldNames: imageFields.slice(0, 12).map((field) => field.name || field.id),
+      missingFieldNames: imageFields
+        .filter((field) => !field.filled)
+        .slice(0, 12)
+        .map((field) => field.name || field.id),
       suggestion:
         "\u68c0\u67e5\u4e3b\u56fe\u3001\u8be6\u60c5\u56fe\u3001\u573a\u666f\u56fe\u3001\u7ec6\u8282\u56fe\u662f\u5426\u9f50\u5168\u4e14\u6e05\u6670\u3002",
     },
     pricingCoverage: {
       fieldCount: priceFields.length,
       filledCount: priceFields.filter((field) => field.filled).length,
+      fieldNames: priceFields.slice(0, 12).map((field) => field.name || field.id),
+      missingFieldNames: priceFields
+        .filter((field) => !field.filled)
+        .slice(0, 12)
+        .map((field) => field.name || field.id),
       suggestion:
         "\u68c0\u67e5 MOQ\u3001\u9636\u68af\u4ef7\u3001\u6837\u54c1\u4ef7\u3001\u5e01\u79cd\u548c\u4ef7\u683c\u533a\u95f4\u662f\u5426\u5b8c\u6574\u3002",
     },

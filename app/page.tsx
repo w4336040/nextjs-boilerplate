@@ -1,6 +1,29 @@
 import { headers } from "next/headers";
 import type { ReactNode } from "react";
 
+type SchemaRequiredPreviewItem = {
+  id?: string;
+  name?: string;
+  type?: string;
+  group?: string;
+  reason?: string;
+  path?: string[];
+  filled?: boolean;
+  valuePreview?: string;
+  optionsPreview?: Array<{ displayName?: string; value?: string }>;
+};
+
+type SchemaFieldPreviewItem = {
+  id?: string;
+  name?: string;
+  type?: string;
+  depth?: number;
+  path?: string[];
+  required?: boolean;
+  value?: string;
+  filled?: boolean;
+};
+
 type DashboardResponse = {
   ok: boolean;
   generatedAt?: string;
@@ -70,15 +93,48 @@ type DashboardResponse = {
     imageCoverage?: {
       fieldCount?: number;
       filledCount?: number;
+      fieldNames?: string[];
+      missingFieldNames?: string[];
       suggestion?: string;
     } | null;
     pricingCoverage?: {
       fieldCount?: number;
       filledCount?: number;
+      fieldNames?: string[];
+      missingFieldNames?: string[];
       suggestion?: string;
     } | null;
     priorities?: string[];
   };
+  productSchema?: {
+    summary?: {
+      fieldCount?: number;
+      requiredCount?: number;
+      groups?: Array<{ name: string; count: number }>;
+      requiredPreview?: SchemaRequiredPreviewItem[];
+      fieldsPreview?: SchemaFieldPreviewItem[];
+    } | null;
+    optimization?: {
+      missingRequiredCount?: number;
+      weakContentCount?: number;
+      imageCoverage?: {
+        fieldCount?: number;
+        filledCount?: number;
+        fieldNames?: string[];
+        missingFieldNames?: string[];
+        suggestion?: string;
+      } | null;
+      pricingCoverage?: {
+        fieldCount?: number;
+        filledCount?: number;
+        fieldNames?: string[];
+        missingFieldNames?: string[];
+        suggestion?: string;
+      } | null;
+    } | null;
+    requiredPreview?: SchemaRequiredPreviewItem[];
+    fieldsPreview?: SchemaFieldPreviewItem[];
+  } | null;
   actionableSuggestions?: Array<{
     key?: string;
     title?: string;
@@ -88,6 +144,7 @@ type DashboardResponse = {
     action?: string;
     evidence?: string;
     fieldPath?: string[];
+    currentValue?: string;
   }>;
   nextSuggestions?: string[];
   error?: string;
@@ -361,6 +418,10 @@ function ListBlock({
   );
 }
 
+function joinOrEmpty(items?: string[]) {
+  return items?.length ? items.join(" / ") : "—";
+}
+
 function formatDateTime(value?: string) {
   if (!value) return "未知";
   try {
@@ -425,6 +486,9 @@ export default async function Home({ searchParams }: PageProps) {
         ? "warn"
         : "bad";
   const optimizationSummary = dashboard.optimization || null;
+  const productSchema = dashboard.productSchema || null;
+  const requiredPreview = productSchema?.requiredPreview || productSchema?.summary?.requiredPreview || [];
+  const fieldsPreview = productSchema?.fieldsPreview || productSchema?.summary?.fieldsPreview || [];
 
   return (
     <main className="min-h-screen bg-[radial-gradient(circle_at_top_left,rgba(59,130,246,0.10),transparent_30%),radial-gradient(circle_at_top_right,rgba(16,185,129,0.10),transparent_28%),linear-gradient(180deg,#f8fafc_0%,#f3f7fb_42%,#eef3f8_100%)] text-slate-950">
@@ -497,7 +561,7 @@ export default async function Home({ searchParams }: PageProps) {
                 <div>
                   <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">当前商品</div>
                   <div className="mt-2 text-2xl font-semibold tracking-tight text-slate-950">Alibaba 商品 {productId}</div>
-                  <div className="mt-1 text-sm text-slate-600">围绕评分、诊断和案例方案的一页式优化视图。</div>
+                  <div className="mt-1 text-sm text-slate-600">围绕评分、诊断、字段和案例方案的一页式优化视图。</div>
                 </div>
                 <Badge tone="accent">在线</Badge>
               </div>
@@ -507,6 +571,11 @@ export default async function Home({ searchParams }: PageProps) {
                 <DataRow label="精品标记" value={boutiqueTag} />
                 <DataRow label="必填字段" value={`${schemaRequiredCount} 项`} />
                 <DataRow label="字段总数" value={`${schemaFieldCount} 项`} />
+              </div>
+
+              <div className="mt-5 grid gap-3 sm:grid-cols-2">
+                <DataRow label="图片字段" value={joinOrEmpty(optimizationSummary?.imageCoverage?.fieldNames?.slice(0, 4))} />
+                <DataRow label="价格字段" value={joinOrEmpty(optimizationSummary?.pricingCoverage?.fieldNames?.slice(0, 4))} />
               </div>
             </Panel>
 
@@ -553,7 +622,7 @@ export default async function Home({ searchParams }: PageProps) {
                 <Badge tone={reportTone}>{reportStatus}</Badge>
               </div>
 
-              <div className="mt-5 grid gap-3 md:grid-cols-2">
+              <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
                 <DataRow label="商品 ID" value={productId} />
                 <DataRow label="当前评分" value={score} />
                 <DataRow label="精品标记" value={boutiqueTag} />
@@ -643,7 +712,11 @@ export default async function Home({ searchParams }: PageProps) {
                         </div>
                         <div className="mt-2 text-sm leading-6 text-slate-600">{item.reason}</div>
                         <div className="mt-2 text-sm leading-6 text-slate-950">{item.action}</div>
-                        {item.evidence ? <div className="mt-2 text-xs text-slate-500">{item.evidence}</div> : null}
+                        <div className="mt-2 grid gap-2 text-xs text-slate-500">
+                          {item.fieldPath?.length ? <div>字段路径：{item.fieldPath.join(" / ")}</div> : null}
+                          {item.currentValue ? <div>当前值：{item.currentValue}</div> : null}
+                          {item.evidence ? <div>证据：{item.evidence}</div> : null}
+                        </div>
                       </div>
                     ))
                   ) : (
@@ -699,6 +772,75 @@ export default async function Home({ searchParams }: PageProps) {
                 <div className="mt-4 space-y-3">
                   <ListBlock items={signals} emptyText="暂无信号" tone="neutral" />
                   <ListBlock items={actions} emptyText="暂无动作" tone="accent" />
+                </div>
+              </Panel>
+
+              <Panel>
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">商品基础信息</div>
+                    <h3 className="mt-2 text-lg font-semibold tracking-tight text-slate-950">字段预览 / 当前填值</h3>
+                  </div>
+                  <Badge tone="accent">{fieldsPreview.length} 项</Badge>
+                </div>
+
+                <div className="mt-4 space-y-3">
+                  {fieldsPreview.length ? (
+                    fieldsPreview.slice(0, 8).map((field, index) => (
+                      <div key={`${String(field.id || field.name || index)}`} className="rounded-[18px] border border-slate-200 bg-slate-50/80 px-4 py-3">
+                        <div className="flex flex-wrap items-start justify-between gap-3">
+                          <div>
+                            <div className="text-sm font-medium text-slate-950">{String(field.name || field.id || "未命名字段")}</div>
+                            <div className="mt-1 text-xs text-slate-500">{Array.isArray(field.path) ? field.path.join(" / ") : String(field.id || "")}</div>
+                          </div>
+                          <Badge tone={field.required ? "warn" : "neutral"}>{field.required ? "required" : "optional"}</Badge>
+                        </div>
+                        <div className="mt-2 text-sm leading-6 text-slate-600">
+                          当前值：{formatValue((field as Record<string, unknown>).value || "—")}
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="rounded-[18px] border border-dashed border-slate-200 bg-slate-50/60 px-4 py-3 text-sm text-slate-500">
+                      暂时还没有解析到字段预览。
+                    </div>
+                  )}
+                </div>
+              </Panel>
+
+              <Panel>
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">必填预览</div>
+                    <h3 className="mt-2 text-lg font-semibold tracking-tight text-slate-950">最重要的缺失字段</h3>
+                  </div>
+                  <Badge tone="accent">{requiredPreview.length} 项</Badge>
+                </div>
+
+                <div className="mt-4 space-y-3">
+                  {requiredPreview.length ? (
+                    requiredPreview.slice(0, 8).map((item) => (
+                      <div key={`${item.id || item.name || (item.path || []).join("/")}`} className="rounded-[18px] border border-slate-200 bg-slate-50/80 px-4 py-3">
+                        <div className="flex flex-wrap items-start justify-between gap-3">
+                          <div>
+                            <div className="text-sm font-medium text-slate-950">{String(item.name || item.id || "未命名字段")}</div>
+                            <div className="mt-1 text-xs text-slate-500">{(item.path || []).join(" / ") || String(item.id || "")}</div>
+                          </div>
+                          <Badge tone={item.filled ? "good" : "bad"}>{item.filled ? "filled" : "missing"}</Badge>
+                        </div>
+                        <div className="mt-2 text-sm leading-6 text-slate-600">
+                          {item.valuePreview ? `当前值：${item.valuePreview}` : "当前值：—"}
+                        </div>
+                        <div className="mt-2 text-sm leading-6 text-slate-950">
+                          {item.reason || "requiredRule=true"}
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="rounded-[18px] border border-dashed border-slate-200 bg-slate-50/60 px-4 py-3 text-sm text-slate-500">
+                      暂时没有必填字段预览。
+                    </div>
+                  )}
                 </div>
               </Panel>
             </div>

@@ -55,6 +55,19 @@ function summarizeDiagnosis(diagnosis: unknown) {
   };
 }
 
+function summarizeProductSchema(schema: unknown) {
+  if (!schema || typeof schema !== "object") return null;
+  const data = schema as Record<string, unknown>;
+  const summary = data.summary as Record<string, unknown> | undefined;
+  const optimization = data.optimization as Record<string, unknown> | undefined;
+  return {
+    summary: summary || null,
+    optimization: optimization || null,
+    requiredPreview: Array.isArray(summary?.requiredPreview) ? summary.requiredPreview.slice(0, 12) : [],
+    fieldsPreview: Array.isArray(summary?.fieldsPreview) ? summary.fieldsPreview.slice(0, 20) : [],
+  };
+}
+
 export async function GET(request: NextRequest) {
   try {
     const productId = request.nextUrl.searchParams.get("product_id") || "1601815992580";
@@ -70,6 +83,7 @@ export async function GET(request: NextRequest) {
       request,
       `/api/alibaba/product/optimize?product_id=${encodeURIComponent(productId)}`,
     );
+    const productSchema = optimization?.productSchema || null;
 
     const reportError = pickReportError(productReport);
     const diagnosisSummary = summarizeDiagnosis(diagnosis);
@@ -119,6 +133,7 @@ export async function GET(request: NextRequest) {
           ? optimization.optimizationSummary.priorities
           : [],
       },
+      productSchema: summarizeProductSchema(productSchema),
       actionableSuggestions: Array.isArray(optimization?.actionableSuggestions)
         ? optimization.actionableSuggestions
         : [],

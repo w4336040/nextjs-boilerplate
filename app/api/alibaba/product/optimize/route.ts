@@ -11,6 +11,7 @@ type ActionableSuggestion = {
   action: string;
   evidence?: string;
   fieldPath?: string[];
+  currentValue?: string;
 };
 
 type RecordObject = Record<string, unknown>;
@@ -55,6 +56,30 @@ function pathText(path: string[]) {
   return path.length ? path.join(" / ") : "未提供路径";
 }
 
+function compactValue(value: unknown) {
+  if (value === null || value === undefined || value === "") return "";
+  if (typeof value === "string") return value.trim().slice(0, 120);
+  if (typeof value === "number" || typeof value === "boolean") return String(value);
+  try {
+    return JSON.stringify(value).slice(0, 120);
+  } catch {
+    return "";
+  }
+}
+
+function listText(items: unknown) {
+  if (!Array.isArray(items)) return "";
+  return items
+    .map((item) => {
+      if (!item || typeof item !== "object") return "";
+      const record = item as RecordObject;
+      return String(record.displayName || record.cnName || record.value || "").trim();
+    })
+    .filter(Boolean)
+    .slice(0, 6)
+    .join(" / ");
+}
+
 function titleFromName(name: string) {
   return name
     .replace(/_/g, " ")
@@ -65,23 +90,25 @@ function titleFromName(name: string) {
 function buildMissingRequiredAction(item: RecordObject) {
   const group = String(item.group || "").toLowerCase();
   const name = String(item.name || item.id || "未命名字段");
+  const path = pathText(normalizePath(item.path));
+  const options = listText(item.optionsPreview);
 
   if (group.includes("image")) {
-    return `补齐 ${name} 对应的主图、场景图或细节图；首图保持主体清晰、无水印、无裁切。`;
+    return `补齐 ${name} 对应的主图、场景图或细节图；首图保持主体清晰、无水印、无裁切。${path ? ` 路径：${path}。` : ""}${options ? ` 可选值：${options}。` : ""}`;
   }
   if (group.includes("pricing")) {
-    return `补齐 ${name} 对应的单价、阶梯价、样品价、MOQ、币种和价格区间。`;
+    return `补齐 ${name} 对应的单价、阶梯价、样品价、MOQ、币种和价格区间。${path ? ` 路径：${path}。` : ""}${options ? ` 可选值：${options}。` : ""}`;
   }
   if (group.includes("logistics")) {
-    return `补齐 ${name} 对应的物流方式、交期、发货地、运费模板。`;
+    return `补齐 ${name} 对应的物流方式、交期、发货地、运费模板。${path ? ` 路径：${path}。` : ""}${options ? ` 可选值：${options}。` : ""}`;
   }
   if (group.includes("sku")) {
-    return `补齐 ${name} 对应的规格、颜色、尺码、SKU 图片和库存。`;
+    return `补齐 ${name} 对应的规格、颜色、尺码、SKU 图片和库存。${path ? ` 路径：${path}。` : ""}${options ? ` 可选值：${options}。` : ""}`;
   }
   if (group.includes("content")) {
-    return `在 ${name} 中加入核心词、品类词、材质、型号或用途，避免空泛描述。`;
+    return `在 ${name} 中加入核心词、品类词、材质、型号或用途，避免空泛描述。${path ? ` 路径：${path}。` : ""}${options ? ` 可选值：${options}。` : ""}`;
   }
-  return `按 Schema 必填要求补齐 ${name}，避免发布或编辑时校验失败。`;
+  return `按 Schema 必填要求补齐 ${name}，避免发布或编辑时校验失败。${path ? ` 路径：${path}。` : ""}${options ? ` 可选值：${options}。` : ""}`;
 }
 
 function buildWeakContentAction(item: RecordObject) {
@@ -89,14 +116,15 @@ function buildWeakContentAction(item: RecordObject) {
   const path = normalizePath(item.path);
   const pathLabel = pathText(path);
   const suggestion = String(item.suggestion || "");
+  const current = compactValue(item.valuePreview || item.value);
 
   if (suggestion) return suggestion;
 
   const lower = `${name} ${pathLabel}`.toLowerCase();
   if (lower.includes("title") || lower.includes("keyword") || lower.includes("summary")) {
-    return `把 ${pathLabel} 扩写到 80-120 字符，前置核心词、品类词、材质和型号，并保留买家可搜索的词。`;
+    return `把 ${pathLabel} 扩写到 80-120 字符，前置核心词、品类词、材质和型号，并保留买家可搜索的词。${current ? ` 当前值：${current}。` : ""}`;
   }
-  return `把 ${pathLabel} 补成更完整的英文说明，加入规格、材质、场景、认证或卖点。`;
+  return `把 ${pathLabel} 补成更完整的英文说明，加入规格、材质、场景、认证或卖点。${current ? ` 当前值：${current}。` : ""}`;
 }
 
 function buildProblemAction(key: string) {
@@ -173,6 +201,10 @@ function buildCoverageSuggestion(
   const record = coverage as RecordObject;
   const fieldCount = Number(record.fieldCount || 0);
   const filledCount = Number(record.filledCount || 0);
+  const fieldNames = Array.isArray(record.fieldNames) ? record.fieldNames.filter(Boolean).map(String) : [];
+  const missingFieldNames = Array.isArray(record.missingFieldNames)
+    ? record.missingFieldNames.filter(Boolean).map(String)
+    : [];
   if (!fieldCount || filledCount >= fieldCount) return null;
 
   if (kind === "imageCoverage") {
@@ -181,9 +213,11 @@ function buildCoverageSuggestion(
       title: "补齐图片覆盖",
       priority: "high",
       source: "schema.optimization.imageCoverage",
-      reason: `图片字段 ${filledCount}/${fieldCount} 已填写。`,
+      reason: `图片字段 ${filledCount}/${fieldCount} 已填写。${fieldNames.length ? ` 已识别字段：${fieldNames.slice(0, 4).join(" / ")}。` : ""}${missingFieldNames.length ? ` 缺失字段：${missingFieldNames.slice(0, 4).join(" / ")}。` : ""}`,
       action: "优先补主图、场景图、细节图、对比图；首图保证主体清晰、无水印、主体占画面 70% 以上。",
-      evidence: typeof record.suggestion === "string" ? record.suggestion : undefined,
+      evidence: [typeof record.suggestion === "string" ? record.suggestion : "", missingFieldNames.length ? `缺失字段：${missingFieldNames.slice(0, 4).join(" / ")}` : ""]
+        .filter(Boolean)
+        .join(" · "),
     };
   }
 
@@ -192,9 +226,11 @@ function buildCoverageSuggestion(
     title: "补齐价格和 MOQ",
     priority: "high",
     source: "schema.optimization.pricingCoverage",
-    reason: `价格字段 ${filledCount}/${fieldCount} 已填写。`,
+    reason: `价格字段 ${filledCount}/${fieldCount} 已填写。${fieldNames.length ? ` 已识别字段：${fieldNames.slice(0, 4).join(" / ")}。` : ""}${missingFieldNames.length ? ` 缺失字段：${missingFieldNames.slice(0, 4).join(" / ")}。` : ""}`,
     action: "补单价、阶梯价、样品价、MOQ、币种和交付条件，让买家能直接判断采购成本。",
-    evidence: typeof record.suggestion === "string" ? record.suggestion : undefined,
+    evidence: [typeof record.suggestion === "string" ? record.suggestion : "", missingFieldNames.length ? `缺失字段：${missingFieldNames.slice(0, 4).join(" / ")}` : ""]
+      .filter(Boolean)
+      .join(" · "),
   };
 }
 
@@ -240,10 +276,12 @@ function buildActionableSuggestions(
       evidence: [
         path.length ? `路径：${pathText(path)}` : "",
         optionNames.length ? `可选值：${optionNames.join(" / ")}` : "",
+        compactValue(record.valuePreview || record.value) ? `当前值：${compactValue(record.valuePreview || record.value)}` : "",
       ]
         .filter(Boolean)
         .join(" · "),
       fieldPath: path.length ? path : undefined,
+      currentValue: compactValue(record.valuePreview || record.value) || undefined,
     });
   }
 
@@ -262,8 +300,11 @@ function buildActionableSuggestions(
       source: "schema.optimization.weakContent",
       reason: `当前文本长度仅 ${valueLength}，容易影响抓词和转化。`,
       action: buildWeakContentAction(record),
-      evidence: path.length ? `路径：${pathText(path)}` : undefined,
+      evidence: [path.length ? `路径：${pathText(path)}` : "", compactValue(record.valuePreview || record.value) ? `当前值：${compactValue(record.valuePreview || record.value)}` : ""]
+        .filter(Boolean)
+        .join(" · "),
       fieldPath: path.length ? path : undefined,
+      currentValue: compactValue(record.valuePreview || record.value) || undefined,
     });
   }
 
@@ -312,8 +353,8 @@ function buildActionableSuggestions(
             : "medium",
       source: "score.problem_map",
       reason: scoreValue !== null ? `质量评分规则命中，得分 ${scoreValue.toFixed(2)}。` : "质量评分规则命中。",
-      action: info.action,
-      evidence: `key: ${key}`,
+      action: `${info.action}${extendProblemMapRecord && extendProblemMapRecord[key] === false ? " 该项当前在 extendProblemMap 中为 false。" : ""}`,
+      evidence: `key: ${key}${scoreValue !== null ? ` · score: ${scoreValue.toFixed(2)}` : ""}`,
     });
   }
 
@@ -365,6 +406,7 @@ export async function GET(request: NextRequest) {
     const finalScore = scoreData?.result?.final_score || null;
     const boutiqueTag = scoreData?.result?.boutique_tag || 0;
     const optimization = render?.schema?.optimization || null;
+    const schemaSummary = render?.schema?.summary || null;
     const actualQualityProblem = hasActualQualityProblem(problemMap);
     const isBoutique = Number(finalScore) >= 4.8 && Boolean(boutiqueTag);
     const report = {
@@ -399,6 +441,7 @@ export async function GET(request: NextRequest) {
       },
       report,
       productSchema: render?.schema || null,
+      productSummary: schemaSummary,
       optimization: optimization || null,
       score: scoreData,
       optimizationSummary: {
