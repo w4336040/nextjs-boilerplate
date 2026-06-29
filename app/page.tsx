@@ -64,6 +64,31 @@ type DashboardResponse = {
     boutiqueTag?: string | number | null;
     problemMap?: unknown;
   };
+  optimization?: {
+    missingRequiredCount?: number;
+    weakContentCount?: number;
+    imageCoverage?: {
+      fieldCount?: number;
+      filledCount?: number;
+      suggestion?: string;
+    } | null;
+    pricingCoverage?: {
+      fieldCount?: number;
+      filledCount?: number;
+      suggestion?: string;
+    } | null;
+    priorities?: string[];
+  };
+  actionableSuggestions?: Array<{
+    key?: string;
+    title?: string;
+    priority?: "high" | "medium" | "low";
+    source?: string;
+    reason?: string;
+    action?: string;
+    evidence?: string;
+    fieldPath?: string[];
+  }>;
   nextSuggestions?: string[];
   error?: string;
 };
@@ -159,6 +184,21 @@ const casePlans = [
   },
 ] as const;
 
+const priorityRank: Record<"high" | "medium" | "low", number> = {
+  high: 0,
+  medium: 1,
+  low: 2,
+};
+
+const sourceLabels: Record<string, string> = {
+  "schema.optimization.missingRequired": "Schema 必填项",
+  "schema.optimization.weakContent": "弱内容",
+  "schema.optimization.imageCoverage": "图片覆盖",
+  "schema.optimization.pricingCoverage": "价格覆盖",
+  "score.problem_map": "质量评分",
+  "report.safeNextActions": "保底建议",
+};
+
 function formatValue(value: unknown) {
   if (value === null || value === undefined || value === "") return "—";
   if (typeof value === "string") return value;
@@ -179,6 +219,16 @@ function parseProblemMap(raw: unknown): ProblemMap | null {
   }
   if (typeof raw === "object") return raw as ProblemMap;
   return null;
+}
+
+function sortSuggestions(
+  items: NonNullable<DashboardResponse["actionableSuggestions"]>,
+) {
+  return [...items].sort((a, b) => {
+    const rankA = priorityRank[a.priority || "low"];
+    const rankB = priorityRank[b.priority || "low"];
+    return rankA - rankB;
+  });
 }
 
 function problemLabel(key: string) {
@@ -361,6 +411,7 @@ export default async function Home({ searchParams }: PageProps) {
   const productReportError = dashboard.productReport?.error || null;
   const problemMap = parseProblemMap(dashboard.productScore?.problemMap);
   const issueFlags = deriveIssueFlags(problemMap);
+  const actionableSuggestions = sortSuggestions(dashboard.actionableSuggestions || []);
   const nextSuggestions = dashboard.nextSuggestions || [];
   const signals = (dashboard.signals || []).slice(0, 3);
   const actions = (dashboard.actions || []).slice(0, 3);
@@ -373,6 +424,7 @@ export default async function Home({ searchParams }: PageProps) {
       : Number.isFinite(productScoreValue) && productScoreValue >= 3.5
         ? "warn"
         : "bad";
+  const optimizationSummary = dashboard.optimization || null;
 
   return (
     <main className="min-h-screen bg-[radial-gradient(circle_at_top_left,rgba(59,130,246,0.10),transparent_30%),radial-gradient(circle_at_top_right,rgba(16,185,129,0.10),transparent_28%),linear-gradient(180deg,#f8fafc_0%,#f3f7fb_42%,#eef3f8_100%)] text-slate-950">
@@ -508,6 +560,19 @@ export default async function Home({ searchParams }: PageProps) {
                 <DataRow label="诊断项目" value={`${dashboard.diagnosis?.count ?? 0} 项`} />
               </div>
 
+              <div className="mt-5 grid gap-3 md:grid-cols-3">
+                <DataRow label="必填缺失" value={`${optimizationSummary?.missingRequiredCount ?? 0} 项`} />
+                <DataRow label="弱内容" value={`${optimizationSummary?.weakContentCount ?? 0} 项`} />
+                <DataRow
+                  label="图片覆盖"
+                  value={
+                    optimizationSummary?.imageCoverage
+                      ? `${optimizationSummary.imageCoverage.filledCount ?? 0}/${optimizationSummary.imageCoverage.fieldCount ?? 0}`
+                      : "—"
+                  }
+                />
+              </div>
+
               <div className="mt-5">
                 <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Schema 分组</div>
                 <div className="mt-3 flex flex-wrap gap-2">
@@ -552,6 +617,40 @@ export default async function Home({ searchParams }: PageProps) {
                       <Badge tone="accent">等待下一轮字段优化</Badge>
                     )}
                   </div>
+                </div>
+              </div>
+
+              <div className="mt-5">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">具体修改建议</div>
+                    <h3 className="mt-2 text-lg font-semibold tracking-tight text-slate-950">按字段拆开的可执行优化项</h3>
+                  </div>
+                  <Badge tone="accent">{actionableSuggestions.length} 项</Badge>
+                </div>
+                <div className="mt-4 grid gap-3">
+                  {actionableSuggestions.length ? (
+                    actionableSuggestions.slice(0, 8).map((item) => (
+                      <div key={item.key || item.title} className="rounded-[18px] border border-slate-200 bg-slate-50/80 px-4 py-3">
+                        <div className="flex flex-wrap items-center justify-between gap-3">
+                          <div className="text-sm font-medium text-slate-950">{item.title}</div>
+                          <div className="flex flex-wrap gap-2">
+                            <Badge tone={item.priority === "high" ? "bad" : item.priority === "medium" ? "warn" : "neutral"}>
+                              {item.priority || "low"}
+                            </Badge>
+                            <Badge tone="neutral">{sourceLabels[item.source || ""] || item.source || "来源未明"}</Badge>
+                          </div>
+                        </div>
+                        <div className="mt-2 text-sm leading-6 text-slate-600">{item.reason}</div>
+                        <div className="mt-2 text-sm leading-6 text-slate-950">{item.action}</div>
+                        {item.evidence ? <div className="mt-2 text-xs text-slate-500">{item.evidence}</div> : null}
+                      </div>
+                    ))
+                  ) : (
+                    <div className="rounded-[18px] border border-dashed border-slate-200 bg-slate-50/60 px-4 py-3 text-sm text-slate-500">
+                      当前还没有字段级建议，通常是因为授权数据不完整或接口返回为空。
+                    </div>
+                  )}
                 </div>
               </div>
             </Panel>

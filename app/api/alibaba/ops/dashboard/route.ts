@@ -66,6 +66,10 @@ export async function GET(request: NextRequest) {
       fetchJson(request, "/api/alibaba/ad/product-diagnosis"),
       fetchJson(request, `/api/alibaba/product/score?product_id=${encodeURIComponent(productId)}`),
     ]);
+    const optimization = await fetchJson(
+      request,
+      `/api/alibaba/product/optimize?product_id=${encodeURIComponent(productId)}`,
+    );
 
     const reportError = pickReportError(productReport);
     const diagnosisSummary = summarizeDiagnosis(diagnosis);
@@ -106,6 +110,18 @@ export async function GET(request: NextRequest) {
         raw: productReport,
       },
       diagnosis: diagnosisSummary,
+      optimization: {
+        missingRequiredCount: optimization?.optimizationSummary?.missingRequiredCount ?? 0,
+        weakContentCount: optimization?.optimizationSummary?.weakContentCount ?? 0,
+        imageCoverage: optimization?.optimizationSummary?.imageCoverage ?? null,
+        pricingCoverage: optimization?.optimizationSummary?.pricingCoverage ?? null,
+        priorities: Array.isArray(optimization?.optimizationSummary?.priorities)
+          ? optimization.optimizationSummary.priorities
+          : [],
+      },
+      actionableSuggestions: Array.isArray(optimization?.actionableSuggestions)
+        ? optimization.actionableSuggestions
+        : [],
       productScore: {
         productId,
         finalScore: scoreData?.final_score ?? null,
