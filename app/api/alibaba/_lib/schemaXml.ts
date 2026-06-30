@@ -11,6 +11,13 @@ export type SchemaOption = {
   value: string;
 };
 
+export type SchemaValueItem = {
+  value: string;
+  rawValue: string;
+  displayValue: string;
+  attributes: Record<string, string>;
+};
+
 export type SchemaField = {
   id: string;
   name: string;
@@ -19,6 +26,9 @@ export type SchemaField = {
   path: string[];
   required: boolean;
   value: string;
+  rawValue: string;
+  displayValue: string;
+  valueItems: SchemaValueItem[];
   filled: boolean;
   rules: SchemaRule[];
   options: SchemaOption[];
@@ -50,12 +60,10 @@ function attrsToRecord(attrs: string) {
 }
 
 function stripNestedFields(inner: string) {
-  return inner.replace(/<fields>[\s\S]*?<\/fields>/g, "");
-}
-
-function textContent(xml: string, tag: string) {
-  const found = xml.match(new RegExp(`<${tag}\\b[^>]*>([\\s\\S]*?)<\\/${tag}>`));
-  return found?.[1]?.replace(/<[^>]*>/g, "").trim() || "";
+  return inner
+    .replace(/<fields>[\s\S]*?<\/fields>/g, "")
+    .replace(/<complex-value>[\s\S]*?<\/complex-value>/g, "")
+    .replace(/<complex-values>[\s\S]*?<\/complex-values>/g, "");
 }
 
 function getDirectFieldInner(xml: string, openEnd: number) {
@@ -79,6 +87,56 @@ function getDirectFieldInner(xml: string, openEnd: number) {
   }
 
   return "";
+}
+
+function decodeXml(value: string) {
+  return value
+    .replace(/&quot;/g, '"')
+    .replace(/&apos;/g, "'")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .trim();
+}
+
+function optionLabel(rawValue: string, options: SchemaOption[]) {
+  const found = options.find((option) => option.value === rawValue);
+  return found?.displayName || "";
+}
+
+function optionMapKey(field: Pick<SchemaField, "id" | "name">) {
+  return `${field.id.trim().toLowerCase()}::${field.name.trim().toLowerCase()}`;
+}
+
+function mergeOptions(target: SchemaOption[], next: SchemaOption[]) {
+  const seen = new Set(target.map((item) => item.value));
+  for (const option of next) {
+    if (!option.value || seen.has(option.value)) continue;
+    seen.add(option.value);
+    target.push(option);
+  }
+}
+
+function extractValueItems(xml: string, options: SchemaOption[]) {
+  const items: SchemaValueItem[] = [];
+  for (const match of xml.matchAll(/<value\b([^>]*)>([\s\S]*?)<\/value>/g)) {
+    const attributes = attrsToRecord(match[1] || "");
+    const rawValue = decodeXml((match[2] || "").replace(/<[^>]*>/g, ""));
+    const displayValue = decodeXml(
+      attributes.inputValue ||
+        attributes.valueName ||
+        attributes.name ||
+        optionLabel(rawValue, options) ||
+        rawValue,
+    );
+    items.push({
+      value: displayValue,
+      rawValue,
+      displayValue,
+      attributes,
+    });
+  }
+  return items;
 }
 
 export function parseSchemaXml(xml: string) {
@@ -122,7 +180,10 @@ export function parseSchemaXml(xml: string) {
     const path = [...stack.map((item) => item.name || item.id), name || id].filter(
       Boolean,
     );
-    const value = textContent(ownInner, "value");
+    const valueItems = extractValueItems(ownInner, options);
+    const rawValue = valueItems.map((item) => item.rawValue).filter(Boolean).join(" / ");
+    const displayValue = valueItems.map((item) => item.displayValue).filter(Boolean).join(" / ");
+    const value = displayValue || rawValue;
 
     fields.push({
       id,
@@ -134,7 +195,10 @@ export function parseSchemaXml(xml: string) {
         (rule) => rule.name === "requiredRule" && rule.value === "true",
       ),
       value,
-      filled: Boolean(value || ownInner.includes("<values>")),
+      rawValue,
+      displayValue,
+      valueItems,
+      filled: Boolean(value.trim() || valueItems.length),
       rules,
       options,
     });
@@ -142,6 +206,48 @@ export function parseSchemaXml(xml: string) {
     if (!full.endsWith("/>")) {
       stack.push({ id, name });
     }
+  }
+
+  const optionsByField = new Map<string, SchemaOption[]>();
+  for (const field of fields) {
+    if (!field.options.length) continue;
+    const exactKey = optionMapKey(field);
+    const idKey = `${field.id.trim().toLowerCase()}::`;
+    if (!optionsByField.has(exactKey)) optionsByField.set(exactKey, []);
+    if (!optionsByField.has(idKey)) optionsByField.set(idKey, []);
+    mergeOptions(optionsByField.get(exactKey) || [], field.options);
+    mergeOptions(optionsByField.get(idKey) || [], field.options);
+  }
+
+  for (const field of fields) {
+    const fallbackOptions = [
+      ...(optionsByField.get(optionMapKey(field)) || []),
+      ...(optionsByField.get(`${field.id.trim().toLowerCase()}::`) || []),
+    ];
+    if (!fallbackOptions.length || !field.valueItems.length) continue;
+
+    const nextItems = field.valueItems.map((item) => {
+      if (item.attributes.inputValue || item.displayValue !== item.rawValue) {
+        return item;
+      }
+      const label = optionLabel(item.rawValue, fallbackOptions);
+      if (!label) return item;
+      return {
+        ...item,
+        value: label,
+        displayValue: label,
+      };
+    });
+    const rawValue = nextItems.map((item) => item.rawValue).filter(Boolean).join(" / ");
+    const displayValue = nextItems
+      .map((item) => item.displayValue)
+      .filter(Boolean)
+      .join(" / ");
+    field.valueItems = nextItems;
+    field.rawValue = rawValue;
+    field.displayValue = displayValue;
+    field.value = displayValue || rawValue;
+    field.filled = Boolean(field.value.trim() || field.valueItems.length);
   }
 
   return fields;
@@ -175,7 +281,7 @@ function displayName(field: Pick<SchemaField, "id" | "name">) {
 }
 
 function hasMeaningfulValue(field: SchemaField) {
-  return Boolean(field.value.trim()) || field.filled;
+  return Boolean(field.value.trim() || field.displayValue.trim() || field.rawValue.trim());
 }
 
 function isOptionalTemplateRequired(field: SchemaField) {
@@ -219,6 +325,7 @@ function hasMatchingFilledValue(required: SchemaField, fields: SchemaField[]) {
   }
 
   if (
+    required.id === "scImages" ||
     required.id === "superText" ||
     requiredPath.includes("details of the picture")
   ) {
@@ -263,20 +370,70 @@ function hasMatchingFilledValue(required: SchemaField, fields: SchemaField[]) {
   });
 }
 
+function findMatchingFilledField(required: SchemaField, fields: SchemaField[]) {
+  if (hasMeaningfulValue(required)) return required;
+
+  const requiredPath = pathText(required);
+  const requiredName = normalized(displayName(required));
+  const sameId = fields.filter(
+    (field) => field.id === required.id && hasMeaningfulValue(field),
+  );
+
+  const exact = sameId.find((field) => {
+    const filledName = normalized(displayName(field));
+    return filledName === requiredName || pathText(field) === requiredPath;
+  });
+  if (exact) return exact;
+
+  if (required.id.startsWith("p-") && sameId.length) return sameId[0];
+
+  if (requiredPath.includes("ladderprice_0")) {
+    const priceOrQty = sameId.find((field) => pathText(field).includes("ladderprice_0"));
+    if (priceOrQty) return priceOrQty;
+  }
+
+  if (requiredPath.includes("logistics supply mode")) {
+    const logistics = sameId.find((field) =>
+      pathText(field).includes("logistics supply mode"),
+    );
+    if (logistics) return logistics;
+  }
+
+  if (required.id === "unit_type") {
+    return fields.find((field) => field.id === "priceUnit" && hasMeaningfulValue(field));
+  }
+
+  if (required.id === "scImages") {
+    return fields.find(
+      (field) =>
+        field.id.startsWith("scImages_") &&
+        pathText(field).includes("product images") &&
+        hasMeaningfulValue(field),
+    );
+  }
+
+  return sameId[0];
+}
+
 export function buildSchemaChecklist(fields: SchemaField[]) {
   const seen = new Set<string>();
   return fields
     .filter((field) => field.required && field.id)
-    .map<SchemaChecklistItem>((field) => ({
-      id: field.id,
-      name: field.name || field.id,
-      type: field.type,
-      group: groupForField(field),
-      reason: "requiredRule=true",
-      path: field.path,
-      valuePreview: field.value.trim().slice(0, 120),
-      optionsPreview: field.options.slice(0, 8),
-    }))
+    .map<SchemaChecklistItem>((field) => {
+      const matched = findMatchingFilledField(field, fields);
+      const filled = hasMatchingFilledValue(field, fields);
+      return {
+        id: field.id,
+        name: field.name || field.id,
+        type: field.type,
+        group: groupForField(field),
+        reason: "requiredRule=true",
+        path: field.path,
+        filled,
+        valuePreview: (matched?.value || field.value).trim().slice(0, 120),
+        optionsPreview: field.options.slice(0, 8),
+      };
+    })
     .filter((item) => {
       const key = `${item.group}:${item.id}:${item.name}:${(item.path || []).join("/")}`;
       if (seen.has(key)) return false;
@@ -370,6 +527,6 @@ export function summarizeParsedSchema(fields: SchemaField[]) {
       }, {}),
     ).map(([name, count]) => ({ name, count })),
     requiredPreview: checklist.slice(0, 80),
-    fieldsPreview: fields.slice(0, 120),
+    fieldsPreview: fields.slice(0, 260),
   };
 }

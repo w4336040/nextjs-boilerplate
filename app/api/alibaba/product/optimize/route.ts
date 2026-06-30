@@ -1,4 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
+import {
+  buildContentSuggestions,
+  buildProductProfile,
+} from "../../_lib/productAnalyzer";
 
 export const runtime = "nodejs";
 
@@ -407,6 +411,8 @@ export async function GET(request: NextRequest) {
     const boutiqueTag = scoreData?.result?.boutique_tag || 0;
     const optimization = render?.schema?.optimization || null;
     const schemaSummary = render?.schema?.summary || null;
+    const fields = Array.isArray(schemaSummary?.fieldsPreview) ? schemaSummary.fieldsPreview : [];
+    const productProfile = buildProductProfile(fields, productId);
     const actualQualityProblem = hasActualQualityProblem(problemMap);
     const isBoutique = Number(finalScore) >= 4.8 && Boolean(boutiqueTag);
     const report = {
@@ -441,6 +447,8 @@ export async function GET(request: NextRequest) {
       },
       report,
       productSchema: render?.schema || null,
+      productProfile,
+      contentSuggestions: buildContentSuggestions(productProfile, optimization),
       productSummary: schemaSummary,
       optimization: optimization || null,
       score: scoreData,

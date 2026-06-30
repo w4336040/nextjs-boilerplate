@@ -22,12 +22,14 @@ function pickReportError(report: unknown) {
   if (!report || typeof report !== "object") return null;
   const record = report as Record<string, unknown>;
   const data = record.data as Record<string, unknown> | undefined;
-  const error = data?.error_response as Record<string, unknown> | undefined;
+  const error =
+    (data?.error_response as Record<string, unknown> | undefined) ||
+    (record.error_response as Record<string, unknown> | undefined);
   if (!error) return null;
   return {
-    code: error.code ?? null,
-    msg: error.msg ?? null,
-    subCode: error.sub_code ?? null,
+    code: error.code ?? error.error_code ?? null,
+    msg: error.msg ?? error.message ?? null,
+    subCode: error.sub_code ?? error.subCode ?? null,
     requestId: error.request_id ?? null,
   };
 }
@@ -71,13 +73,14 @@ function summarizeProductSchema(schema: unknown) {
 export async function GET(request: NextRequest) {
   try {
     const productId = request.nextUrl.searchParams.get("product_id") || "1601815992580";
-    const [tokenStatus, envStatus, schemaChecklist, productReport, diagnosis, productScore] = await Promise.all([
+    const [tokenStatus, envStatus, schemaChecklist, productReport, diagnosis, productScore, productDetail] = await Promise.all([
       fetchJson(request, "/api/alibaba/token/status"),
       fetchJson(request, "/api/alibaba/env"),
       fetchJson(request, "/api/alibaba/product/schema/checklist"),
       fetchJson(request, "/api/alibaba/ad/product-report"),
       fetchJson(request, "/api/alibaba/ad/product-diagnosis"),
       fetchJson(request, `/api/alibaba/product/score?product_id=${encodeURIComponent(productId)}`),
+      fetchJson(request, `/api/alibaba/product/detail?product_id=${encodeURIComponent(productId)}`),
     ]);
     const optimization = await fetchJson(
       request,
@@ -86,6 +89,7 @@ export async function GET(request: NextRequest) {
     const productSchema = optimization?.productSchema || null;
 
     const reportError = pickReportError(productReport);
+    const detailError = pickReportError(productDetail);
     const diagnosisSummary = summarizeDiagnosis(diagnosis);
     const hasToken = Boolean(tokenStatus?.hasToken);
     const envOk = Boolean(envStatus?.ok);
@@ -119,6 +123,34 @@ export async function GET(request: NextRequest) {
       tokenStatus,
       envStatus,
       schemaChecklist,
+      usableApis: [
+        {
+          name: "alibaba.icbu.product.schema.render",
+          label: "商品编辑字段与当前值",
+          ok: Boolean(optimization?.renderOk || productSchema?.hasXml),
+          usage: "当前商品基础信息、字段完整度、标题/属性/价格/图片草稿。",
+        },
+        {
+          name: "alibaba.icbu.product.score.get",
+          label: "商品质量分",
+          ok: Boolean(productScore?.ok && !pickReportError(productScore)),
+          usage: "质量分、精品标、规则命中状态。",
+        },
+        {
+          name: "alibaba.icbu.product.get",
+          label: "单个商品详情",
+          ok: Boolean(productDetail?.ok && !detailError),
+          usage: "如果权限/ID 类型可用，可补充商品状态、主图、详情、商品链接。",
+          error: detailError,
+        },
+        {
+          name: "alibaba.scbp.ad.report.get.product.report",
+          label: "外贸直通车商品报表",
+          ok: reportOk,
+          usage: "CTR、CPC、询盘率、询盘成本；当前不足权限时仅展示待开通状态。",
+          error: reportError,
+        },
+      ],
       productReport: {
         error: reportError,
         raw: productReport,
@@ -134,6 +166,10 @@ export async function GET(request: NextRequest) {
           : [],
       },
       productSchema: summarizeProductSchema(productSchema),
+      productProfile: optimization?.productProfile || null,
+      contentSuggestions: Array.isArray(optimization?.contentSuggestions)
+        ? optimization.contentSuggestions
+        : [],
       actionableSuggestions: Array.isArray(optimization?.actionableSuggestions)
         ? optimization.actionableSuggestions
         : [],

@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "商品诊断工作台",
-  description: "商品、诊断项目和优秀案例方案的一页式工作台。",
+  title: "Alibaba 商品优化诊断",
+  description: "基于 Alibaba 国际站 API 的商品基础信息、质量诊断和可采纳优化草稿工作台。",
 };
 
 export default function RootLayout({
