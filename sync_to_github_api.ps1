@@ -162,6 +162,11 @@ $Tree = Invoke-GitHubApi -Method POST -Path "/repos/$Owner/$Repo/git/trees" -Bod
   tree      = $TreeItems
 }
 
+if ($Tree.sha -eq $BaseTreeSha) {
+  Write-Host "No file content changes compared with GitHub $Branch."
+  exit 0
+}
+
 $Commit = Invoke-GitHubApi -Method POST -Path "/repos/$Owner/$Repo/git/commits" -Body @{
   message = $Message
   tree    = $Tree.sha
