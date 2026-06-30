@@ -10,10 +10,48 @@ $ErrorActionPreference = "Stop"
 
 Set-Location $PSScriptRoot
 
-$Token = $env:GITHUB_TOKEN
-if (-not $Token) {
-  throw "Missing GITHUB_TOKEN. In this PowerShell window run: `$env:GITHUB_TOKEN='YOUR_NEW_GITHUB_TOKEN'"
+function Get-GitHubToken {
+  param([Parameter(Mandatory = $true)][string]$Username)
+
+  if ($env:GITHUB_TOKEN) {
+    return $env:GITHUB_TOKEN
+  }
+
+  $Gcm = Get-Command git-credential-manager -ErrorAction SilentlyContinue
+  $GcmPath = if ($Gcm) { $Gcm.Source } else { "C:\Program Files\Git\mingw64\bin\git-credential-manager.exe" }
+  if (-not (Test-Path -LiteralPath $GcmPath)) {
+    throw "Missing GITHUB_TOKEN and Git Credential Manager was not found."
+  }
+
+  $StartInfo = New-Object System.Diagnostics.ProcessStartInfo
+  $StartInfo.FileName = $GcmPath
+  $StartInfo.Arguments = "get"
+  $StartInfo.RedirectStandardInput = $true
+  $StartInfo.RedirectStandardOutput = $true
+  $StartInfo.RedirectStandardError = $true
+  $StartInfo.UseShellExecute = $false
+
+  $Process = [System.Diagnostics.Process]::Start($StartInfo)
+  $Process.StandardInput.Write("protocol=https`nhost=github.com`nusername=$Username`n`n")
+  $Process.StandardInput.Close()
+  $Output = $Process.StandardOutput.ReadToEnd()
+  $ErrorOutput = $Process.StandardError.ReadToEnd()
+  $Process.WaitForExit()
+
+  if ($Process.ExitCode -ne 0) {
+    throw "Git Credential Manager could not return GitHub credentials. $ErrorOutput"
+  }
+
+  foreach ($Line in ($Output -split "`r?`n")) {
+    if ($Line -match "^password=(.+)$") {
+      return $Matches[1]
+    }
+  }
+
+  throw "Git Credential Manager returned no GitHub token/password."
 }
+
+$Token = Get-GitHubToken -Username $Owner
 
 function Invoke-GitHubApi {
   param(
